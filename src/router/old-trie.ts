@@ -1,4 +1,3 @@
-import { extractParam } from "../ctx";
 import { Find, Router } from "../router/interface";
 import type {
   handlerFunction,

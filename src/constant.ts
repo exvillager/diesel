@@ -12,3 +12,5 @@ export const supportedMethods = [
 ];
 
 export const EMPTY_OBJ = Object.freeze({});
+
+export const ALL_METHOD = "ALL";

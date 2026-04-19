@@ -1,94 +1,42 @@
-// import path from 'path';
-// const entryPoints = [
-//     './src/main.ts',
-//     './src/ctx.ts',
-//     './src/handleRequest.ts',
-//     './src/trie.ts',
-//     './src/utils.ts',
-// ];
+import { Glob } from 'bun';
+import { rm } from 'fs/promises';
 
-// entryPoints.forEach(entry => {
-//     console.log(`Building: ${entry}`);
-//     try {
-//         Bun.build({
-//             entrypoints: [path.resolve(entry)],
-//             outdir: './dist',
-//             minify: true,
-//         });
-//     } catch (error) {
-//         console.error(`Failed to build ${entry}:`, error);
-//     }
-// });
+console.log('🧹 Cleaning dist...');
+await rm('./dist', { recursive: true, force: true });
 
-// './src/middlewares/cors/cors.ts',
-// './src/middlewares/security/security.ts'
+// Auto-discover all TS source files, skip tests
+const glob = new Glob('**/*.ts');
+const entrypoints = [];
+for await (const file of glob.scan('./src')) {
+  if (!file.includes('.test.') && !file.includes('.spec.')) {
+    entrypoints.push(`./src/${file}`);
+  }
+}
 
-await Bun.build({
-    entrypoints:[
-        './src/request_pipeline.ts',
-    ],
-    outdir: './dist',
-    minify:true
-})
-
-await Bun.build({
-    entrypoints:[
-        './src/main.ts',
-        './src/router/trie2.ts',
-    ],
-    outdir: './dist',
-    minify: true,
-})
-
+console.log(`📦 Building ${entrypoints.length} entrypoints...`);
 
 const result = await Bun.build({
-    entrypoints: [
-        './src/handleRequest.ts',
-        './src/router/trie.ts',
-        './src/router/interface.ts',
-        './src/http-exception.ts',
-        './src/ctx.ts',
-        './src/constant.ts'
-    ],
-    outdir: './dist',
-    minify: true,
+  entrypoints,
+  outdir: './dist',
+  root: './src',      // preserves src/ directory structure in dist/
+  minify: true,
+  splitting: false,   // no shared chunks — each file is self-contained
+  target: 'node',
 });
 
 if (!result.success) {
-    console.error("❌ BUILD FAILED");
-    for (const message of result.logs) {
-        console.error(message);
-    }
-} else {
-    console.log("✅ Build complete for main src");
+  console.error('❌ Build failed');
+  for (const msg of result.logs) console.error(msg);
+  process.exit(1);
 }
 
-Bun.build({
-    entrypoints: [
-        './src/middlewares/cors/cors.ts', 
-        './src/middlewares/security/security.ts',
-        './src/middlewares/logger/logger.ts',
-        './src/middlewares/filesave/savefile.ts',
-        './src/middlewares/ratelimit/rate-limit.ts',
-        './src/middlewares/ratelimit/implementation.ts',
-        './src/middlewares/powered-by/index.ts',
-        './src/middlewares/jwt/index.ts',
-        './src/middlewares/request-id/index.ts'
-    ],
-    outdir: './dist/middlewares',
-    minify: true,
-})
-console.log('Middleware build complete')
+console.log(`✅ Built ${result.outputs.length} files`);
 
-Bun.build({
-    entrypoints:[
-        './src/utils/jwt.ts',
-        './src/utils/mimeType.ts',
-        './src/utils/urls.ts',
-        './src/utils/request.util.ts',
-        './src/utils/promise.ts'
-    ],
-    outdir: './dist/utils',
-    minify: true
-})
-console.log('build complete')
+console.log('📦 Generating type declarations...');
+const tsc = Bun.spawnSync(['npx', 'tsc', '-p', 'tsconfig.json'], { stdio: ['ignore', 'inherit', 'inherit'] });
+if (tsc.exitCode !== 0) {
+  console.error('❌ tsc failed');
+  process.exit(tsc.exitCode);
+}
+
+console.log('✅ Build complete!');

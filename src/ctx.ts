@@ -39,7 +39,7 @@ export class Context {
 
   constructor(
     req: Request,
-    server: Server|undefined,
+    server: Server | undefined,
     path: string | null,
     param: Record<string, string> | undefined,
     env: Record<string, any> | undefined,
@@ -101,16 +101,7 @@ export class Context {
   }
 
   get params(): Record<string, string> {
-    return this.param ? this.param : EMPTY_OBJ
-    // if (!this.parsedParams) {
-    //   try {
-    //     this.parsedParams = parseParams(this.path,this.param);
-    //   } catch (error) {
-    //     const message = error instanceof Error ? error.message : String(error);
-    //     throw new Error(`Failed t o extract route parameters: ${message}`);
-    //   }
-    // }
-    // return this.parsedParams ?? EMPTY_OBJ;
+    return this.param ? this.param : EMPTY_OBJ;
   }
 
   get body(): Promise<any> {
@@ -408,54 +399,6 @@ function parseCookie(cookieHeader: string): Record<string, string> {
   );
 }
 
-export function extractParam(paramNames: string[], incomingPath: string) {
-  // ["id","name"]
-  const param: Record<string, string> = {};
-  // inComingpath = /user/2/pradeep
-  const [pathWithoutQuery] = incomingPath.split("?");
-  const pathSegments = pathWithoutQuery.split("/").filter(Boolean);
-
-  // let segmentStart = 0
-  // let segmentIndex = 0
-  // const segments: string[] = []
-
-  // for (let i = 0; i <= pathWithoutQuery.length; i++) {
-  //   if (i === pathWithoutQuery.length || pathWithoutQuery.charCodeAt(i) === 47) { // '/'
-  //     if (i > segmentStart) {
-  //       segments[segmentIndex++] = pathWithoutQuery.slice(segmentStart, i)
-  //     }
-  //     segmentStart = i + 1
-  //   }
-  // }
-
-  const start = pathSegments.length - paramNames.length;
-
-  for (let i = 0; i < paramNames.length; i++) {
-    param[paramNames[i]] = pathSegments[start + i];
-  }
-  return param;
-}
-
-export function extractDynamicParams(
-  originalPath: string,
-  incomingPath: string,
-): Record<string, string> | null {
-  const params: Record<string, string> = {};
-  const routeSegments = originalPath.split("/");
-  const [pathWithoutQuery] = incomingPath.split("?");
-  const pathSegments = pathWithoutQuery.split("/");
-
-  if (routeSegments.length !== pathSegments.length) return null;
-
-  for (let i = 0; i < routeSegments.length; i++) {
-    const segment = routeSegments[i];
-    if (segment.charCodeAt(0) === 58) {
-      params[segment.slice(1)] = pathSegments[i];
-    }
-  }
-  return params;
-}
-
 async function parseBody(req: Request): Promise<ParseBodyResult> {
   const contentType: string = req.headers.get("Content-Type") || "";
   if (!contentType) return {};
@@ -486,16 +429,3 @@ async function parseBody(req: Request): Promise<ParseBodyResult> {
   return { error: "Unknown request body type" };
 }
 
-/// param parser
-export function parseParams(inComingpath: string|null, param: Record<string, number>|null) {
-  const paramObject: Record<string, any> = {};
-  
-  const pathWithoutQuery = inComingpath?.split('?')[0]
-  // URL = /user/id/register?name=pradeep
-  // [ "/user/id/register", "name=pradeep" ]
-  const paths = pathWithoutQuery?.split('/').filter(Boolean);
-  for (const key in param) {
-    paramObject[key] = paths?.[param[key]];
-  }
-  return paramObject;
-}

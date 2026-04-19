@@ -4,7 +4,7 @@ import Diesel from "../../src/main";
 export const app = new Diesel();
 
 app
-  .get("/", (c: Context) => {
+  .get("/", async(c: Context) => {
     return c.text("Hi there!");
   })
   .all('/', (c) => {

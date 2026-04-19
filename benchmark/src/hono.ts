@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import Diesel from '../../src/main'
 
 const app = new Hono()
-    .get('/', (c, next) => {
+    .get('/',  (c) => {
         return c.text('Hello Hono!')
         // next()
     })

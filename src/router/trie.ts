@@ -1,4 +1,4 @@
-import { EMPTY_OBJ } from "../constant";
+import { ALL_METHOD, EMPTY_OBJ } from "../constant";
 
 class TrieNodes {
   children: Record<string, TrieNodes>;
@@ -95,7 +95,7 @@ export class TrieRouter {
 
     const pathSegments = path.split("/");
 
-    let collected_middlewares = this.globalMiddlewares.slice()
+    let collected_middlewares = this.globalMiddlewares.slice();
     let paramObject: Record<string, string> | undefined;
 
     for (let i = 0; i < pathSegments.length; i++) {
@@ -113,7 +113,11 @@ export class TrieRouter {
         node = node.children["*"];
         break;
       } else {
-        return { params: paramObject, middlewares: collected_middlewares, handler: undefined };
+        return {
+          params: paramObject,
+          middlewares: collected_middlewares,
+          handler: undefined,
+        };
       }
 
       if (node.middlewares.length > 0) {
@@ -129,24 +133,23 @@ export class TrieRouter {
       return {
         params: paramObject,
         middlewares: collected_middlewares,
-        handler: node.handlers[method]
-      }
+        handler: node.handlers[method],
+      };
     }
-    // else check for ALL method 
-    if (node.handlers["ALL"]) {
+    // else check for ALL method
+    if (node.handlers[ALL_METHOD]) {
       return {
         params: paramObject,
         middlewares: collected_middlewares,
-        handler: node.handlers["ALL"]
-      }
+        handler: node.handlers[ALL_METHOD],
+      };
     }
 
     return {
       params: paramObject,
       middlewares: collected_middlewares,
-      handler: undefined
-    }
-
+      handler: undefined,
+    };
   }
 
   find(method: string, path: string) {
