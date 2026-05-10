@@ -48,7 +48,6 @@ import { Router, RouterFactory } from "./router/interface.js";
 import { ALL_METHOD, EMPTY_OBJ, supportedMethods } from "./constant.js";
 import { isPromise } from "./utils/promise.js";
 
-type RouteHooks = Partial<Record<HookType, Array<Function>>>;
 
 export default class Diesel {
   private static instance: Diesel;
@@ -98,8 +97,6 @@ export default class Diesel {
   options!: RouteHandler;
   propfind!: RouteHandler;
   all!: RouteHandler;
-
-  route_hooks: RouteHooks = {};
 
   constructor(options: DieselOptions = {}) {
     supportedMethods.forEach((method) => {
@@ -561,9 +558,10 @@ export default class Diesel {
 
       let finalResult;
       if (matchedRouteHandler.handler) {
-        for (let i = 0; i < matchedRouteHandler?.handler?.length; i++) {
-          const result = matchedRouteHandler.handler[i](ctx);
+        for (const fn of matchedRouteHandler.handler) {
+          const result = fn(ctx);
           finalResult = isPromise(result) ? await result : result;
+          if (finalResult) break;
         }
       }
 
