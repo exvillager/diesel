@@ -114,9 +114,8 @@ export async function handleRouteNotFound(diesel: Diesel, ctx: ContextType, path
 
   const wildcard = diesel.router.find(ctx.req.method, '*');
   const arr: handlerFunction[] | any = wildcard?.handler
-  const handler = arr.slice(-1)
-  if (handler.length > 0) {
-    const res = await handler[0](ctx)
+  if (arr?.length > 0) {
+    const res = await arr[arr.length - 1](ctx)
     if (isResponse(res)) return res
   }
 

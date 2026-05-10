@@ -399,7 +399,7 @@ function parseCookie(cookieHeader: string): Record<string, string> {
   );
 }
 
-async function parseBody(req: Request, body_size_limit: number | undefined): Promise<ParseBodyResult> {
+async function parseBody(req: Request): Promise<ParseBodyResult> {
   const contentType: string = req.headers.get("Content-Type") || "";
   if (!contentType) return {};
 
@@ -411,7 +411,7 @@ async function parseBody(req: Request, body_size_limit: number | undefined): Pro
     try {
       return await req.json();
     } catch (error) {
-      throw new Error("Invalid JSON in request body");
+      throw new Error("Invalid request body format");
     }
   }
 
