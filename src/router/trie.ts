@@ -1,8 +1,9 @@
 import { ALL_METHOD, EMPTY_OBJ } from "../constant";
+import { Find } from "./interface";
 
 class TrieNodes {
   children: Record<string, TrieNodes>;
-  handlers: Record<string, Function>;
+  handlers: Record<string, Array<Function>>;
   middlewares: Function[];
   params: Record<string, number>;
   paramName: string;
@@ -53,11 +54,13 @@ export class TrieRouter {
     return this.pushMiddleware(path, handlers);
   }
 
-  insert(method: string, path: string, handler: Function) {
+  insert(method: string, path: string, handler: Function | Function[]) {
+    const handlers = Array.isArray(handler) ? handler : [handler];
     let node = this.root;
 
     if (path === "/") {
-      node.handlers[method] = handler;
+      node.handlers[method] ??= [];
+      node.handlers[method].push(...handlers);
       node.params = EMPTY_OBJ;
       return;
     }
@@ -83,14 +86,15 @@ export class TrieRouter {
       }
     }
     node.params = routeparams;
-    node.handlers[method] = handler;
+    node.handlers[method] ??= [];
+    node.handlers[method].push(...handlers);
   }
 
-  add(method: string, path: string, handler: Function) {
+  add(method: string, path: string, handler: Function | Function[]) {
     return this.insert(method, path, handler);
   }
 
-  search(method: string, path: string) {
+  search(method: string, path: string): Find {
     let node = this.root;
 
     const pathSegments = path.split("/");
