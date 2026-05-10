@@ -48,6 +48,8 @@ import { Router, RouterFactory } from "./router/interface.js";
 import { ALL_METHOD, EMPTY_OBJ, supportedMethods } from "./constant.js";
 import { isPromise } from "./utils/promise.js";
 
+type RouteHooks = Partial<Record<HookType, Array<Function>>>;
+
 export default class Diesel {
   private static instance: Diesel;
   routes: Record<string, Function>;
@@ -68,7 +70,7 @@ export default class Diesel {
   hasFilterEnabled: boolean;
   private serverInstance: Server | null;
   staticFiles: any;
-  user_jwt_secret: string;
+  user_jwt_secret: string | undefined;
   baseApiUrl: string;
   private enableFileRouter: boolean;
   idleTimeOut: number;
@@ -96,6 +98,8 @@ export default class Diesel {
   options!: RouteHandler;
   propfind!: RouteHandler;
   all!: RouteHandler;
+
+  route_hooks: RouteHooks = {};
 
   constructor(options: DieselOptions = {}) {
     supportedMethods.forEach((method) => {
@@ -145,10 +149,7 @@ export default class Diesel {
     this.idleTimeOut = idleTimeOut ?? 10;
     this.enableFileRouter = enableFileRouting ?? false;
     this.baseApiUrl = baseApiUrl || "";
-    this.user_jwt_secret =
-      jwtSecret ||
-      process.env.DIESEL_JWT_SECRET ||
-      "default_diesel_secret_for_jwt";
+    this.user_jwt_secret = jwtSecret || process.env.DIESEL_JWT_SECRET;
     this.tempRoutes = new Map<string, TempRouteEntry>();
     this.corsConfig = null;
     this.hasOnReqHook = false;
@@ -263,19 +264,30 @@ export default class Diesel {
       },
 
       authenticateJwt: (jwt: any) => {
+        if (!this.user_jwt_secret)
+          throw new Error(
+            "You must provide jwtSecret in Diesel Options to use authenticateJwt",
+          );
         const wrapper = async (ctx: Context) => {
           const pathname = ctx.path!;
           for (const pub of this.filters) {
             if (pathname.startsWith(pub)) return;
           }
 
-          const res = authenticateJwtMiddleware(jwt, this.user_jwt_secret)(ctx);
+          const res = authenticateJwtMiddleware(
+            jwt,
+            this.user_jwt_secret!,
+          )(ctx);
           if (res) return res;
         };
         this.router.addMiddleware("/", wrapper);
       },
 
       authenticateJwtDB: (jwt: any, User: any) => {
+        if (!this.user_jwt_secret)
+          throw new Error(
+            "You must provide jwtSecret in Diesel Options to use authenticateJwt",
+          );
         const wrapper = async (ctx: Context) => {
           const pathname = ctx.path!;
           for (const pub of this.filters) {
@@ -285,7 +297,7 @@ export default class Diesel {
           const res = authenticateJwtDbMiddleware(
             jwt,
             User,
-            this.user_jwt_secret,
+            this.user_jwt_secret!,
           )(ctx);
           if (res) return res;
         };
@@ -549,8 +561,10 @@ export default class Diesel {
 
       let finalResult;
       if (matchedRouteHandler.handler) {
-        const result = matchedRouteHandler.handler(ctx);
-        finalResult = isPromise(result) ? await result : result;
+        for (let i = 0; i < matchedRouteHandler?.handler?.length; i++) {
+          const result = matchedRouteHandler.handler[i](ctx);
+          finalResult = isPromise(result) ? await result : result;
+        }
       }
 
       // onSend
@@ -572,7 +586,7 @@ export default class Diesel {
 
   // HandleError
   private async handleError(err: unknown, path: string, req: Request) {
-    const isDev = process.env.NODE_ENV === "developement";
+    const isDev = process.env.NODE_ENV === "development";
 
     const format = this.errorFormat;
 
@@ -687,18 +701,8 @@ export default class Diesel {
     for (const [path, args] of tempRoutes.entries()) {
       const cleanedPath = path.replace(/::\w+$/, "");
       const fullpath = `${basePath}${cleanedPath}`;
-
-      // Add all middleware functions for the route, preserving user-defined order.
-      const middlewareHandlers = args.handlers.slice(0, -1) as middlewareFunc[];
-      this.router.addMiddleware(fullpath, middlewareHandlers);
-
-      const handler = args.handlers[args.handlers.length - 1];
       const method = args.method;
-      try {
-        this.router.add(method, fullpath, handler as handlerFunction);
-      } catch (error) {
-        console.error(`Error inserting ${fullpath}:`, error);
-      }
+        this.router.add(method, fullpath, args.handlers as unknown as Function[]);
     }
 
     // Middleware assigning
@@ -757,18 +761,8 @@ export default class Diesel {
       );
 
     this.tempRoutes?.set(path + "::" + method, { method, handlers });
-    const middlewareHandlers = handlers.slice(0, -1) as middlewareFunc[];
-    const handler = handlers[handlers.length - 1];
-
-    if (middlewareHandlers.length > 0)
-      this.addMiddlewareInRouter(path, middlewareHandlers);
-
-    try {
-      method = method === "ANY" ? ALL_METHOD : method;
-      this.router.add(method, path, handler);
-    } catch (error) {
-      console.error(`Error inserting ${path}:`, error);
-    }
+    method = method === "ANY" ? ALL_METHOD : method;
+    this.router.add(method, path, handlers as unknown as Function[]);
   }
 
   /**

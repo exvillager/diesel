@@ -2,7 +2,7 @@ import { TrieRouter } from "./trie.js";
 
 
 export interface Router {
-    add(method: string, path: string, handler: Function): void
+    add(method: string, path: string, handler: Function | Function[]): void
     find(method: string, path: string): Find
     addMiddleware(path: string, handlers: Function | Function[]): void
 }
@@ -10,7 +10,7 @@ export interface Router {
 export interface Find {
     params: Record<string, string> | undefined;
     middlewares: Function[] | undefined;
-    handler: Function | undefined;
+    handler: Array<Function> | undefined;
 }
 
 export class RouterFactory {

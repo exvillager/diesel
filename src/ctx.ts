@@ -399,17 +399,20 @@ function parseCookie(cookieHeader: string): Record<string, string> {
   );
 }
 
-async function parseBody(req: Request): Promise<ParseBodyResult> {
+async function parseBody(req: Request, body_size_limit: number | undefined): Promise<ParseBodyResult> {
   const contentType: string = req.headers.get("Content-Type") || "";
   if (!contentType) return {};
 
-  const contentLength = req.headers.get("Content-Length");
-  if (contentLength === "0" || !req.body) {
+  if (!req.body) {
     return {};
   }
 
   if (contentType.startsWith("application/json")) {
-    return await req.json();
+    try {
+      return await req.json();
+    } catch (error) {
+      throw new Error("Invalid JSON in request body");
+    }
   }
 
   if (contentType.startsWith("application/x-www-form-urlencoded")) {
