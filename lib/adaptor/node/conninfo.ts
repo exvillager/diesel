@@ -13,6 +13,7 @@ export function connInfo(req: http.IncomingMessage | Request): ConnInfo {
     console.log(req.socket)
     if ('headers' in req) {
         if ('get' in req.headers) {
+            // @ts-ignore
             headers = Object.fromEntries(req?.headers?.entries() as any);
         } else {
             headers = req.headers as Record<string, string | string[]>;

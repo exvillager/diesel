@@ -22,12 +22,12 @@ export const authenticateJwt = (options:authenticateJwtT) => {
     if (!options.jwt) throw new Error("JWT library is not defined, please provide jwt to authenticateJwt Function")
 
     if (!options.jwtSecret) options.jwtSecret = options.app.user_jwt_secret
-    
+    if (!options.jwtSecret) throw new Error("jwtSecret is required for authenticateJwt")
+
     const routes: undefined | string[] = options.routes
-    // const app = options.app
     const jwt = options.jwt
     const jwtSecret = options.jwtSecret
-    
+
     const middleware = authenticateJwtMiddleware(jwt, jwtSecret);
 
     // if (!routes || routes.length === 0) {
@@ -57,17 +57,15 @@ export const authenticateJwtDB = (options:authenticateJwtDBT) => {
     if (!options.jwt)
         throw new Error("JWT library is not defined, please provide jwt to authenticateJwt Function")
 
-    if (!options.jwtSecret){
-        options.jwtSecret = options.app.user_jwt_secret
-    }
+    if (!options.jwtSecret) options.jwtSecret = options.app.user_jwt_secret
+    if (!options.jwtSecret) throw new Error("jwtSecret is required for authenticateJwtDB")
 
     const routes = options.routes
-    // const app = options.app
     const jwt = options.jwt
     const jwtSecret = options.jwtSecret
     const userModel = options.userModel
 
-    const middleware = authenticateJwtDbMiddleware(jwt,userModel, jwtSecret);
+    const middleware = authenticateJwtDbMiddleware(jwt, userModel, jwtSecret);
 
     // if (!routes || routes.length === 0) {
     //     app.use("/", authenticateJwtDbMiddleware(jwt, userModel, jwtSecret))
