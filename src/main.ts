@@ -700,7 +700,7 @@ export default class Diesel {
       const cleanedPath = path.replace(/::\w+$/, "");
       const fullpath = `${basePath}${cleanedPath}`;
       const method = args.method;
-        this.router.add(method, fullpath, args.handlers as unknown as Function[]);
+      this.router.add(method, fullpath, args.handlers as unknown as Function[]);
     }
 
     // Middleware assigning

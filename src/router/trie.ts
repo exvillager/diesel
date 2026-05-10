@@ -59,8 +59,8 @@ export class TrieRouter {
     let node = this.root;
 
     if (path === "/") {
-      node.handlers[method] ??= [];
-      node.handlers[method].push(...handlers);
+      if (node.handlers[method]) return;
+      node.handlers[method] = handlers;
       node.params = EMPTY_OBJ;
       return;
     }
@@ -86,8 +86,8 @@ export class TrieRouter {
       }
     }
     node.params = routeparams;
-    node.handlers[method] ??= [];
-    node.handlers[method].push(...handlers);
+    if (node.handlers[method]) return;
+    node.handlers[method] = handlers;
   }
 
   add(method: string, path: string, handler: Function | Function[]) {
