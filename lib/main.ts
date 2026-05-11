@@ -508,7 +508,7 @@ export default class Diesel {
     return this.#handleRequests.bind(this);
   }
 
-  async #handleRequests(
+  #handleRequests(
     req: Request,
     server?: Server,
     env?: Record<string, any>,
@@ -527,58 +527,56 @@ export default class Diesel {
       env,
       executionContext,
     );
-
     try {
-      if (this.hasOnReqHook)
-        await runHooks("onRequest", this.hooks.onRequest, [ctx]);
-
-      // filter execution
-      // if (this.hasFilterEnabled && req.method !== 'OPTIONS') {
-      //   const filterResp = await runFilter(this as any, pathname, ctx);
-      //   if (filterResp) return filterResp;
-      // }
-
-      // Middleware exec
-      if (matchedRouteHandler.middlewares?.length) {
-        for (const mw of matchedRouteHandler.middlewares) {
-          let res = mw(ctx);
-          res = isPromise(res) ? await res : res;
-          if (res) return res;
-        }
-      }
-
-      // pre handler
-      if (this.hasPreHandlerHook) {
-        const result = await runHooks("preHandler", this.hooks.preHandler, [
-          ctx,
-        ]);
-        if (result) return result;
-      }
-
-      let finalResult;
-      if (matchedRouteHandler.handler) {
-        for (const fn of matchedRouteHandler.handler) {
-          const result = fn(ctx);
-          finalResult = isPromise(result) ? await result : result;
-          if (finalResult) break;
-        }
-      }
-
-      // onSend
-      if (this.hasOnSendHook) {
-        const response = await runHooks("onSend", this.hooks.onSend, [
-          ctx,
-          finalResult,
-        ]);
-        if (response) return response;
-      }
-
-      if (finalResult) return finalResult;
-
-      return await handleRouteNotFound(this as any, ctx as any, path);
+      return this.#execute_handlers(ctx, matchedRouteHandler);
     } catch (err: any) {
       return this.handleError(err, path, req);
     }
+  }
+
+  async #execute_handlers(
+    ctx: Context,
+    matchedRouteHandler: any,
+  ): Promise<Response | undefined> {
+    if (this.hasOnReqHook)
+      await runHooks("onRequest", this.hooks.onRequest, [ctx]);
+
+    // Middleware exec
+    if (matchedRouteHandler.middlewares?.length) {
+      for (const mw of matchedRouteHandler.middlewares) {
+        let res = mw(ctx);
+        res = isPromise(res) ? await res : res;
+        if (res) return res;
+      }
+    }
+
+    // pre handler
+    if (this.hasPreHandlerHook) {
+      const result = await runHooks("preHandler", this.hooks.preHandler, [ctx]);
+      if (result) return result;
+    }
+
+    let finalResult;
+    if (matchedRouteHandler.handler) {
+      for (const fn of matchedRouteHandler.handler) {
+        const result = fn(ctx);
+        finalResult = isPromise(result) ? await result : result;
+        if (finalResult) break;
+      }
+    }
+
+    // onSend
+    if (this.hasOnSendHook) {
+      const response = await runHooks("onSend", this.hooks.onSend, [
+        ctx,
+        finalResult,
+      ]);
+      if (response) return response;
+    }
+
+    if (finalResult) return finalResult;
+
+    return await handleRouteNotFound(this as any, ctx as any, ctx.path!);
   }
 
   // HandleError
@@ -653,44 +651,54 @@ export default class Diesel {
   /**
    * Mount method
    * we can use 3rd party framework with diesel.js
-   * or we can use it for sub routing also , even i recommend using mount or sub for sub routing
+   * for diesel , i recommend sub method
    */
 
-  mount(prefix: string, instance: Diesel | DieselFetchHandler) {
-    const fetchHandler =
-      typeof instance === "function"
-        ? instance
-        : (instance.fetch() as DieselFetchHandler);
-
+  mount(prefix: string, instance: DieselFetchHandler | any) {
     const cleanPrefix = prefix.endsWith("/*") ? prefix.slice(0, -1) : prefix;
-
     const prefixLength = cleanPrefix === "/" ? 0 : cleanPrefix.length;
 
-    this.all(prefix, (async (ctx: Context) => {
-      const url = new URL(ctx.req.url);
-      url.pathname = url.pathname.slice(prefixLength) || "/";
-      const newRequest = new Request(url, ctx.req);
-      const response = await fetchHandler(
-        newRequest,
-        ctx.server,
-        ctx.env,
-        ctx.executionContext,
-      );
+    const fetchHandler = typeof instance === "function"
+      ? instance
+      : (instance.fetch() as DieselFetchHandler);
 
-      if (!ctx.headers || !response) return;
+    this.all(prefix, (async (ctx: Context) => {
+      const path = ctx.path?.slice(prefixLength) || "/";
+
+      const url = new URL(ctx.req.url);
+      url.pathname = path;
+      const newRequest = new Request(url, ctx.req);
+      const response = await fetchHandler(newRequest, ctx.server, ctx.env, ctx.executionContext);
+
+      if (!ctx.headers || !response) return response;
 
       const merged = new Headers(response.headers);
       for (const [key, value] of ctx.headers) {
         if (!merged.has(key)) merged.set(key, value);
       }
+
       return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
-        headers:merged
-      })
+        headers: merged,
+      });
     }) as handlerFunction);
   }
 
+  // sub routing ( recommended )
+  sub(prefix: string, child: Diesel) {
+    const cleanPrefix = prefix.endsWith("/*") ? prefix.slice(0, -2) : prefix;
+    const prefixLength = cleanPrefix === "/" ? 0 : cleanPrefix.length;
+
+    this.all(prefix, ((ctx: Context) => {
+      const path = ctx.path?.slice(prefixLength) || "/";
+      const matchedRouteHandler = child.router.find(ctx.req.method, path);
+      ctx.path = path;
+      ctx.param = matchedRouteHandler?.params || EMPTY_OBJ;
+      return child.#execute_handlers(ctx, matchedRouteHandler);
+    }) as handlerFunction);
+  }
+  
   /**
    * Registers a router instance for subrouting.
    * Allows defining subroutes like:
@@ -741,10 +749,6 @@ export default class Diesel {
   //   }
   //   return this
   // }
-  // sub routing but isolated
-  sub(prefix: string, router: Diesel) {
-    return this.mount(prefix, router);
-  }
 
   private addMiddlewareInRouter(
     path: string,
