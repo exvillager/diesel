@@ -527,11 +527,9 @@ export default class Diesel {
       env,
       executionContext,
     );
-    try {
-      return this.#execute_handlers(ctx, matchedRouteHandler);
-    } catch (err: any) {
-      return this.handleError(err, path, req);
-    }
+    return this.#execute_handlers(ctx, matchedRouteHandler).catch((err: any) =>
+      this.handleError(err, path, req),
+    );
   }
 
   async #execute_handlers(
@@ -655,12 +653,13 @@ export default class Diesel {
    */
 
   mount(prefix: string, instance: DieselFetchHandler | any) {
-    const cleanPrefix = prefix.endsWith("/*") ? prefix.slice(0, -1) : prefix;
+    const cleanPrefix = prefix.endsWith("/*") ? prefix.slice(0, -2) : prefix;
     const prefixLength = cleanPrefix === "/" ? 0 : cleanPrefix.length;
 
-    const fetchHandler = typeof instance === "function"
-      ? instance
-      : (instance.fetch() as DieselFetchHandler);
+    const fetchHandler =
+      typeof instance === "function"
+        ? instance
+        : (instance.fetch() as DieselFetchHandler);
 
     this.all(prefix, (async (ctx: Context) => {
       const path = ctx.path?.slice(prefixLength) || "/";
@@ -668,7 +667,12 @@ export default class Diesel {
       const url = new URL(ctx.req.url);
       url.pathname = path;
       const newRequest = new Request(url, ctx.req);
-      const response = await fetchHandler(newRequest, ctx.server, ctx.env, ctx.executionContext);
+      const response = await fetchHandler(
+        newRequest,
+        ctx.server,
+        ctx.env,
+        ctx.executionContext,
+      );
 
       if (!ctx.headers || !response) return response;
 
@@ -695,10 +699,12 @@ export default class Diesel {
       const matchedRouteHandler = child.router.find(ctx.req.method, path);
       ctx.path = path;
       ctx.param = matchedRouteHandler?.params || EMPTY_OBJ;
-      return child.#execute_handlers(ctx, matchedRouteHandler);
+      return child
+        .#execute_handlers(ctx, matchedRouteHandler)
+        .catch((err: any) => this.handleError(err, path, ctx.req));
     }) as handlerFunction);
   }
-  
+
   /**
    * Registers a router instance for subrouting.
    * Allows defining subroutes like:
