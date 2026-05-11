@@ -1,6 +1,6 @@
 {
   "name": "diesel-core",
-  "version": "2.0.6",
+  "version": "2.1.0",
   "description": "Web framework built on Web Standards",
   "main": "index.js",
   "types": "index.d.ts",
@@ -70,10 +70,10 @@
       "import": "./dist/http-exception.js",
       "require": "./dist/http-exception.js"
     },
-    "./node":{
+    "./node": {
       "types": "./dist/adaptor/node/main.d.ts",
-      "import":"./dist/adaptor/node/main.js",
-      "require":"./dist/adaptor/node/main.js"
+      "import": "./dist/adaptor/node/main.js",
+      "require": "./dist/adaptor/node/main.js"
     }
   },
   "scripts": {
