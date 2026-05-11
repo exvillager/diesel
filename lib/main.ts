@@ -48,7 +48,6 @@ import { Router, RouterFactory } from "./router/interface.js";
 import { ALL_METHOD, EMPTY_OBJ, supportedMethods } from "./constant.js";
 import { isPromise } from "./utils/promise.js";
 
-
 export default class Diesel {
   private static instance: Diesel;
   routes: Record<string, Function>;
@@ -667,16 +666,28 @@ export default class Diesel {
 
     const prefixLength = cleanPrefix === "/" ? 0 : cleanPrefix.length;
 
-    this.all(prefix, ((ctx: Context) => {
+    this.all(prefix, (async (ctx: Context) => {
       const url = new URL(ctx.req.url);
       url.pathname = url.pathname.slice(prefixLength) || "/";
       const newRequest = new Request(url, ctx.req);
-      return fetchHandler(
+      const response = await fetchHandler(
         newRequest,
         ctx.server,
         ctx.env,
         ctx.executionContext,
       );
+
+      if (!ctx.headers || !response) return;
+
+      const merged = new Headers(response.headers);
+      for (const [key, value] of ctx.headers) {
+        if (!merged.has(key)) merged.set(key, value);
+      }
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers:merged
+      })
     }) as handlerFunction);
   }
 
