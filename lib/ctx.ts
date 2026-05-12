@@ -25,7 +25,7 @@ export class Context {
   req: Request;
   server?: Server;
   path: string | null;
-  param: Record<string, string> | undefined;
+  #param: Record<string, string> | undefined;
   env?: Record<string, any>;
   executionContext?: any;
   headers: Headers | null;
@@ -41,14 +41,14 @@ export class Context {
     req: Request,
     server: Server | undefined,
     path: string | null,
-    param: Record<string, string> | undefined,
+    param: Record<string, string> | undefined, 
     env: Record<string, any> | undefined,
     executionContext: any | undefined,
   ) {
     this.req = req;
     this.server = server;
     this.path = path;
-    this.param = param;
+    this.#param = param;
     this.env = env;
     this.executionContext = executionContext;
 
@@ -101,7 +101,11 @@ export class Context {
   }
 
   get params(): Record<string, string> {
-    return this.param ? this.param : EMPTY_OBJ;
+    return this.#param ?? EMPTY_OBJ;
+  }
+
+  set params(v: Record<string, string>) {
+    this.#param = v;
   }
 
   get body(): Promise<any> {

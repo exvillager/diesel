@@ -661,7 +661,7 @@ export default class Diesel {
         ? instance
         : (instance.fetch() as DieselFetchHandler);
 
-    this.all(prefix, (async (ctx: Context) => {
+    const handler = async (ctx: Context) => {
       const path = ctx.path?.slice(prefixLength) || "/";
 
       const url = new URL(ctx.req.url);
@@ -686,7 +686,10 @@ export default class Diesel {
         statusText: response.statusText,
         headers: merged,
       });
-    }) as handlerFunction);
+    };
+
+    this.all(prefix, handler as handlerFunction);
+    this.all(cleanPrefix, handler as handlerFunction);
   }
 
   // sub routing ( recommended )
@@ -694,15 +697,18 @@ export default class Diesel {
     const cleanPrefix = prefix.endsWith("/*") ? prefix.slice(0, -2) : prefix;
     const prefixLength = cleanPrefix === "/" ? 0 : cleanPrefix.length;
 
-    this.all(prefix, ((ctx: Context) => {
+    const handler = (ctx: Context) => {
       const path = ctx.path?.slice(prefixLength) || "/";
       const matchedRouteHandler = child.router.find(ctx.req.method, path);
       ctx.path = path;
-      ctx.param = matchedRouteHandler?.params || EMPTY_OBJ;
+      ctx.params = matchedRouteHandler?.params || EMPTY_OBJ;
       return child
         .#execute_handlers(ctx, matchedRouteHandler)
         .catch((err: any) => this.handleError(err, path, ctx.req));
-    }) as handlerFunction);
+    };
+
+    this.all(prefix, handler as handlerFunction)
+    this.all(cleanPrefix,handler as handlerFunction)
   }
 
   /**
@@ -755,14 +761,7 @@ export default class Diesel {
   //   }
   //   return this
   // }
-
-  private addMiddlewareInRouter(
-    path: string,
-    handlers: middlewareFunc | middlewareFunc[],
-  ) {
-    this.router.addMiddleware(path, handlers);
-  }
-
+  
   private addRoute(
     method: HttpMethod,
     path: string,
