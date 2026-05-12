@@ -556,8 +556,9 @@ export default class Diesel {
 
     let finalResult;
     if (matchedRouteHandler.handler) {
-      for (const fn of matchedRouteHandler.handler) {
-        const result = fn(ctx);
+      const handlers = matchedRouteHandler.handler;
+      for (let i = 0; i < handlers.length; i++) {
+        const result = handlers[i](ctx);
         finalResult = isPromise(result) ? await result : result;
         if (finalResult) break;
       }
