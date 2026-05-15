@@ -21,6 +21,14 @@ const typeMap: any = {
   ArrayBuffer: "application/octet-stream",
 };
 
+const TEXT_PLAIN_CT = "text/plain; charset=utf-8";
+// Shared init objects — Response constructor copies headers internally, safe to reuse
+const _TEXT_INIT: ResponseInit = { headers: { "Content-Type": TEXT_PLAIN_CT } };
+const _TEXT_INIT_WITH_STATUS = (status: number): ResponseInit => ({
+  status,
+  headers: { "Content-Type": TEXT_PLAIN_CT },
+});
+
 export class Context {
   req: Request;
   server?: Server;
@@ -138,28 +146,18 @@ export class Context {
   ): Response {
     if (!this.headers) {
       if (!customHeaders) {
-        return new Response(data, {
-          status,
-          headers: {
-            "Content-Type": "text/plain; charset=utf-8",
-          },
-        });
+        return new Response(data, status === 200 ? _TEXT_INIT : _TEXT_INIT_WITH_STATUS(status));
       }
-      const h: Record<string, string> = {
-        "Content-Type": "text/plain; charset=utf-8",
-      };
+      const h: Record<string, string> = { "Content-Type": TEXT_PLAIN_CT };
       copyHeadersToObject(customHeaders, h);
-      return new Response(data, {
-        status,
-        headers: h,
-      });
+      return new Response(data, { status, headers: h });
     }
 
     // slow path , actually not slow , it's normal
     if (customHeaders) applyCustomHeaders(this.headers, customHeaders);
 
     if (!this.headers?.has("Content-Type")) {
-      this.headers?.set("Content-Type", "text/plain; charset=utf-8");
+      this.headers?.set("Content-Type", TEXT_PLAIN_CT);
     }
 
     return new Response(data, { status, headers: this.headers });
@@ -218,22 +216,17 @@ export class Context {
   ): Response {
     if (!this.headers) {
       if (!customHeaders) {
-        return Response.json(object, {
-          status,
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-          },
-        });
+        // Response.json() sets Content-Type automatically; skip options entirely when status=200
+        return status === 200
+          ? Response.json(object)
+          : Response.json(object, { status });
       }
 
       const h: Record<string, string> = {
         "Content-Type": "application/json; charset=utf-8",
       };
       copyHeadersToObject(customHeaders, h);
-      return Response.json(object, {
-        status,
-        headers: h,
-      });
+      return Response.json(object, { status, headers: h });
     }
 
     // slow path
