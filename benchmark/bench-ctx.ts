@@ -1,5 +1,5 @@
-import { Context as HonoContext } from "./hono-ctx";
-import { Context as DieselContext } from "../src/ctx";
+import { Context as HonoContext } from "./hono-ctx.js";
+import { Context as DieselContext } from "../lib/ctx.js";
 
 const ITER = 10_000_00;
 
@@ -59,6 +59,7 @@ console.log("");
 // -----------------------------
 // 2. text() without headers
 // -----------------------------
+
 
 bench("Diesel text()", () => {
   for (let i = 0; i < ITER; i++) {

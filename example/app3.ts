@@ -1,10 +1,10 @@
-import Diesel from "../src/main";
-import { ContextType } from "../src/types";
-import { HTTPException } from '../src/http-exception';
+import Diesel from "../lib/main";
+import { ContextType } from "../lib/types";
+import { HTTPException } from '../lib/http-exception';
 import FindMyWay from 'find-my-way'
-import { FindMyWayRouter } from "../src/router/find-my-way";
-import { TrieRouter2 } from '../src/router/trie2'
-import { Context } from "../src/ctx";
+import { FindMyWayRouter } from "../lib/router/find-my-way";
+import { TrieRouter2 } from '../lib/router/trie2'
+import { Context } from "../lib/ctx";
 
 
 // const t2 = new TrieRouter2()
@@ -14,7 +14,7 @@ const app = new Diesel({
     errorFormat: 'text',
     // logger: true,
     // router: 'fastify',
-    pipelineArchitecture: true
+    pipelineArchitecture: false
     // routerInstance: t2
     // router: 'fastify',
 })
@@ -106,7 +106,7 @@ app.get('/async', (ctx: Context): any => {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
             resolve(ctx.text("maybe resolved"))
-        }, 200);
+        }, 600);
     })
 })
 

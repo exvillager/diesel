@@ -1,36 +1,20 @@
-import { type Context } from "../../src/ctx";
-import Diesel from "../../src/main";
+import { type Context } from "../../lib/ctx";
+import Diesel from "../../lib/main";
 
 export const app = new Diesel();
 
-app
-  .get("/", async(c: Context) => {
-    return c.text("Hi there!");
-  })
-  .all('/', (c) => {
-    return c.text("from any")
-  })
-  .get('/hello/*', (ctx: Context) => {
-    const params = ctx.params;
-    return ctx.text("hello /hello/foo")
-  })
-  .get('/hello/foo', (ctx: Context) => {
-    const params = ctx.params;
-    return ctx.text("hello /foo")
-  })
+app.get("/", (c: Context) => {
+  return c.json({ message: "Hi there!", framework: "diesel" });
+});
 
-  const user = new Diesel({logger:false});
-  user.get("/", (c: Context) => {
-    return c.json({ message: "User Home!" });
-  })
-  user.get("/profile", (c: Context) => {
-    return c.json({ message: "User Profile!" });
+for (let i = 1; i <= 1000; i++) {
+  app.get(`/route/${i}`, (c: Context) => {
+    return c.json({ route: i });
   });
+}
 
-  // console.log("user's instance hooks ", user.hooks)
-
-  app.sub('/user/*', user)
-
-// app.BunRoute("GET", "/", () => new Response("Hi there from Bun route!"));
+app.get("/user/:id/post/:postId", (c: Context) => {
+  return c.json({ userId: c.params.id, postId: c.params.postId });
+});
 
 app.listen(3000);
