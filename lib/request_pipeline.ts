@@ -221,8 +221,8 @@ export const BunRequestPipline = (diesel: Diesel, method: string, path: string, 
   const onRequestHooks = diesel?.hasOnReqHook ? diesel.hooks.onRequest : [];
 
   //filters
-  const hasFilter = diesel.filters.has(path)
-  const filterFunctions = diesel.filterFunction
+  const hasFilter = diesel.filters?.has(path) ?? false
+  const filterFunctions = diesel.filterFunction ?? []
   // Hooks
   if (onRequestHooks && onRequestHooks?.length > 0) {
     pipeline.push(`

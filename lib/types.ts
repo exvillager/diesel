@@ -76,12 +76,12 @@ export interface onSend {
 }
 
 export interface Hooks {
-    onRequest: onRequest[];
-    preHandler: HookFunction[];
-    postHandler: HookFunction[];
-    onSend: onSend[];
-    onError: onError[];
-    onClose: HookFunction[];
+    onRequest: onRequest[] | null;
+    preHandler: HookFunction[] | null;
+    postHandler: HookFunction[] | null;
+    onSend: onSend[] | null;
+    onError: onError[] | null;
+    onClose: HookFunction[] | null;
 }
 
 

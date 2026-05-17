@@ -52,7 +52,7 @@ export default class Diesel {
   private static instance: Diesel;
   routes: Record<string, Function>;
   private tempRoutes: Map<string, TempRouteEntry> | null;
-  tempMiddlewares: Map<string, middlewareFunc[]> | null = new Map();
+  tempMiddlewares: Map<string, middlewareFunc[]> | null;
 
   router: Router;
   hasOnReqHook: boolean;
@@ -63,11 +63,11 @@ export default class Diesel {
   hooks: Hooks;
   corsConfig: corsT;
   FilterRoutes: string[] | null | undefined;
-  filters: Set<string>;
-  filterFunction: Function[];
+  filters: Set<string> | undefined;
+  filterFunction: Function[] | null;
   hasFilterEnabled: boolean;
   private serverInstance: Server | null;
-  staticFiles: any;
+  staticFiles: any | undefined;
   user_jwt_secret: string | undefined;
   baseApiUrl: string;
   private enableFileRouter: boolean;
@@ -78,7 +78,7 @@ export default class Diesel {
   private prefixApiUrl: string | null;
   compileConfig: CompileConfig | null;
   #newPipelineArchitecture: boolean = false;
-  emitter: EventEmitter;
+  emitter: undefined | EventEmitter;
   errorFormat: errorFormat;
   platform: string = "bun";
   // tha path of static files
@@ -137,7 +137,6 @@ export default class Diesel {
     }
 
     this.errorFormat = errorFormat;
-    this.emitter = new EventEmitter();
 
     this.prefixApiUrl = prefixApiUrl ?? "";
     this.fetch = this.fetch.bind(this);
@@ -147,6 +146,7 @@ export default class Diesel {
     this.baseApiUrl = baseApiUrl || "";
     this.user_jwt_secret = jwtSecret || process.env.DIESEL_JWT_SECRET;
     this.tempRoutes = new Map<string, TempRouteEntry>();
+    this.tempMiddlewares = null;
     this.corsConfig = null;
     this.hasOnReqHook = false;
     this.hasPreHandlerHook = false;
@@ -154,12 +154,12 @@ export default class Diesel {
     this.hasOnSendHook = false;
     this.hasOnError = false;
     this.hooks = {
-      onRequest: [],
-      preHandler: [],
-      postHandler: [],
-      onSend: [],
-      onError: [],
-      onClose: [],
+      onRequest: null,
+      preHandler: null,
+      postHandler: null,
+      onSend: null,
+      onError: null,
+      onClose: null,
     };
 
     // if user wants to log Error and respective Res
@@ -178,13 +178,10 @@ export default class Diesel {
         // },
       });
 
-    this.FilterRoutes = [];
-    this.filters = new Set<string>();
-    this.filterFunction = [];
+    this.filterFunction = null;
     this.hasFilterEnabled = false;
     this.serverInstance = null;
     this.staticPath = null;
-    this.staticFiles = {};
     this.routeNotFoundFunc = () => {};
 
     this.compileConfig = null;
@@ -225,6 +222,8 @@ export default class Diesel {
   */
   setupFilter(): FilterMethods {
     this.hasFilterEnabled = true;
+    if (!this.filters) this.filters = new Set();
+    if (!this.filterFunction) this.filterFunction = [];
 
     return {
       publicRoutes: (...routes: string[]) => {
@@ -233,11 +232,11 @@ export default class Diesel {
       },
 
       permitAll: () => {
-        for (let route of this?.FilterRoutes!) {
+        for (let route of this.FilterRoutes!) {
           if (route.endsWith("/")) {
             route = route.slice(0, -1);
           }
-          this.filters.add(route);
+          this.filters!.add(route);
         }
         return this.setupFilter();
       },
@@ -246,7 +245,7 @@ export default class Diesel {
         if (fnc?.length) {
           const wrapper = async (ctx: Context, server: Server) => {
             const pathname = ctx.path!;
-            for (const pub of this.filters) {
+            for (const pub of this.filters!) {
               if (pathname.startsWith(pub)) return;
             }
 
@@ -266,7 +265,7 @@ export default class Diesel {
           );
         const wrapper = async (ctx: Context) => {
           const pathname = ctx.path!;
-          for (const pub of this.filters) {
+          for (const pub of this.filters!) {
             if (pathname.startsWith(pub)) return;
           }
 
@@ -286,7 +285,7 @@ export default class Diesel {
           );
         const wrapper = async (ctx: Context) => {
           const pathname = ctx.path!;
-          for (const pub of this.filters) {
+          for (const pub of this.filters!) {
             if (pathname.startsWith(pub)) return;
           }
 
@@ -332,11 +331,15 @@ export default class Diesel {
   }
 
   staticHtml(args: Record<string, string>): this {
+    if (!this.staticFiles) this.staticFiles = {};
     this.staticFiles = { ...this.staticFiles, ...args };
     return this;
   }
 
-  addHooks<T extends HookType>(typeOfHook: T, fnc: Hooks[T][number]): this {
+  addHooks<T extends HookType>(
+    typeOfHook: T,
+    fnc: NonNullable<Hooks[T]>[number],
+  ): this {
     if (typeof typeOfHook !== "string") {
       throw new Error("hookName must be a string");
     }
@@ -347,27 +350,27 @@ export default class Diesel {
 
     switch (typeOfHook) {
       case "onRequest":
-        this.hooks.onRequest?.push(fnc as onRequest);
+        (this.hooks.onRequest ??= []).push(fnc as onRequest);
         this.hasOnReqHook = true;
         break;
       case "preHandler":
-        this.hooks.preHandler?.push(fnc as HookFunction);
+        (this.hooks.preHandler ??= []).push(fnc as HookFunction);
         this.hasPreHandlerHook = true;
         break;
       case "postHandler":
-        this.hooks.postHandler?.push(fnc as HookFunction);
+        (this.hooks.postHandler ??= []).push(fnc as HookFunction);
         this.hasPostHandlerHook = true;
         break;
       case "onSend":
-        this.hooks.onSend?.push(fnc as onSend);
+        (this.hooks.onSend ??= []).push(fnc as onSend);
         this.hasOnSendHook = true;
         break;
       case "onError":
-        this.hooks.onError?.push(fnc as onError);
+        (this.hooks.onError ??= []).push(fnc as onError);
         this.hasOnError = true;
         break;
       case "onClose":
-        this.hooks.onClose?.push(fnc as HookFunction);
+        (this.hooks.onClose ??= []).push(fnc as HookFunction);
         break;
       default:
         throw new Error(`Unknown hook type: ${typeOfHook}`);
@@ -419,10 +422,10 @@ export default class Diesel {
       port,
       hostname,
       idleTimeOut: this.idleTimeOut,
-
       fetch: this.fetch(),
-      static: this.staticFiles,
     };
+
+    if (this.staticFiles) ServerOptions.static = this.staticFiles;
 
     if (this.routes && Object.keys(this.routes).length > 0) {
       ServerOptions.routes = this.routes;
@@ -585,18 +588,20 @@ export default class Diesel {
     const format = this.errorFormat;
 
     // 1. user defined hooks
-    const hookResult = await runHooks("onError", this.hooks.onError, [
-      err,
-      path,
-      req,
-    ]);
-    if (hookResult) return hookResult;
+    if (this.hasOnError) {
+      const hookResult = await runHooks("onError", this.hooks.onError, [
+        err,
+        path,
+        req,
+      ]);
+      if (hookResult) return hookResult;
+    }
 
     // 2. HTTPException
     if (
       err &&
       typeof err === "object" &&
-      (err as any).name === "HTTPException"
+      (err as HTTPException).name === "HTTPException"
     ) {
       // If a custom Response was provided, use it
       const httpErr = err as HTTPException;
@@ -708,8 +713,8 @@ export default class Diesel {
         .catch((err: any) => this.handleError(err, path, ctx.req));
     };
 
-    this.all(prefix, handler as handlerFunction)
-    this.all(cleanPrefix,handler as handlerFunction)
+    this.all(prefix, handler as handlerFunction);
+    this.all(cleanPrefix, handler as handlerFunction);
   }
 
   /**
@@ -762,7 +767,7 @@ export default class Diesel {
   //   }
   //   return this
   // }
-  
+
   private addRoute(
     method: HttpMethod,
     path: string,
@@ -804,16 +809,17 @@ export default class Diesel {
       | Function[],
     ...handlers: middlewareFunc | middlewareFunc[] | Function | Function[] | any
   ): this {
+    if (!this.tempMiddlewares) this.tempMiddlewares = new Map();
     if (typeof pathORHandler === "string") {
       let path = pathORHandler === "/" ? "/" : pathORHandler;
-      if (!this.tempMiddlewares?.has(path)) this.tempMiddlewares?.set(path, []);
-      this.tempMiddlewares?.get(path)!.push(...handlers);
+      if (!this.tempMiddlewares.has(path)) this.tempMiddlewares.set(path, []);
+      this.tempMiddlewares.get(path)!.push(...handlers);
 
       this.router.addMiddleware(path, handlers);
     } else if (typeof pathORHandler === "function") {
       const arrs = [pathORHandler, ...handlers];
-      if (!this.tempMiddlewares?.has("/")) this.tempMiddlewares?.set("/", []);
-      this.tempMiddlewares?.get("/")!.push(...handlers);
+      if (!this.tempMiddlewares.has("/")) this.tempMiddlewares.set("/", []);
+      this.tempMiddlewares.get("/")!.push(...handlers);
 
       this.router.addMiddleware("/", arrs);
     }
@@ -846,12 +852,14 @@ export default class Diesel {
     return this;
   }
 
-  on(event: string | symbol, listener: EventListener) {
+  on(event: string | symbol, listener: (...args: any[]) => void) {
+    if (!this.emitter) this.emitter = new EventEmitter();
     this.emitter.on(event, listener);
     return this;
   }
 
   emit(event: string | symbol, ...args: any) {
+    if (!this.emitter) this.emitter = new EventEmitter();
     this.emitter.emit(event, ...args);
     return this;
   }
