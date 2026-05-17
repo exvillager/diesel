@@ -1,0 +1,70 @@
+---
+title:  Using Hooks in DieselJS
+---
+
+DieselJS allows you to enhance your request handling by utilizing **hooks** at various stages of the request lifecycle. Hooks enable you to execute custom logic such as logging, authentication, data manipulation, and error handling, providing a flexible and powerful way to manage your application's behavior.
+
+## What are Hooks?
+Hooks are registered with the `app.addHooks` method and allow you to listen to specific events in the application or request/response lifecycle our your application.
+
+**By using hooks you can interact directly with the lifecycle of diesel application. These are available hooks:**
+
+- **onRequest**
+- **preHandler**
+- **postHandler**
+- **onSend**
+- **onError**
+
+### onRequest
+**Triggered when a request is received. Ideal for logging or initial request checks.**
+***Note***: -`onRequest` gives you `req, url & server` object which is enough for logging incoming request details
+```typescript
+app.addHooks("onRequest", (req, url, server) => {
+  console.log(`Request received: ${req.method} ${url}`);
+  // Access the request , url and server instance here
+});
+```
+### preHandler
+**Invoked just before the request handler executes. Use this for authentication checks or data validation.**
+`preHandler` only gives you `context` object
+```typescript
+app.addHooks("preHandler", (ctx) => {
+  // Check for authentication token
+  const authToken = ctx.req.headers.get("Authorization");
+  if (!authToken) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+});
+```
+### postHandler
+**Executed after the request handler completes but before sending the response. Good for logging response data or modifying it before sending.**
+`postHandler` only gives you `context` object
+
+```typescript
+app.addHooks("postHandler", async (ctx) => {
+  console.log(`Response sent for: ${ctx.req.url}`);
+});
+```
+### onSend
+**Called just before the response is sent to the client. You can manipulate the response here if necessary.**
+`onSend` gives you `context & result` object
+```typescript
+app.addHooks("onSend", async (ctx, result) => {
+  console.log(`Sending response with status: ${result.status}`);
+  return result; // Modify the response here if needed
+});
+```
+### onError
+**Executes if any error occurs during request handling. This is where you can implement centralized error logging or custom error responses.**
+`onError` gives you `error , request,url,server` objects
+```typescript
+app.addHooks("onError", (error, req, url, server) => {
+  console.error(`Error occurred: ${error.message}`);
+  // Optionally, return a new Response object or handle the error
+});
+```
+### routeNotFound
+
+
+## Conclusion
+**Using hooks in DieselJS allows for a structured and maintainable approach to managing application behavior during the request lifecycle. By strategically placing custom logic in hooks, you can streamline tasks such as logging, authentication, and error handling, leading to a more robust application architecture.**

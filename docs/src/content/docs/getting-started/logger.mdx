@@ -1,0 +1,82 @@
+---
+title:  Using Loggers in DieselJS
+---
+
+### Enhancing Request Handling with Loggers in DieselJS
+DieselJS allows you to monitor your request-response cycle efficiently using loggers(). These loggers provide insights into incoming and outgoing requests, helping with debugging and performance analysis.
+
+
+## What are loggers?
+Loggers in DieselJS track and display request details, making it easier to debug your application. They log information about incoming requests and outgoing responses, including request methods, URLs, response statuses, and execution times.
+
+
+### Types of Loggers in DieselJS
+    1. `logger(app)` - Basic logging
+    2. `advancedLogger(app)` - Detailed logging with request metadata
+
+**Using `logger(app)`**
+The `logger()` function provides a simple way to track requests and responses.
+
+Example:
+```
+import {Diesel} from 'diesel-core'
+import {logger} from 'diesel-core/logger'
+
+const app = new Diesel()
+
+// logger needs app instance to work
+app.use(logger(app) as any)
+
+```
+Sample Output:
+```cmd
+<-- GET /
+--> GET / 200 5ms
+
+```
+
+**Using `advancedLogger(app)`**   
+The `advancedLogger()` function provides detailed logging, including request headers, 
+timestamps, and response duration.
+
+Example:
+```
+import {Diesel} from 'diesel-core'
+import {advancedLogger} from 'diesel-core/logger'
+
+const app = new Diesel()
+
+// logger needs app instance to work
+app.use(advancedLogger(app) as any)
+
+```
+
+Sample Output:
+```cmd
+[INFO] Incoming Request - GET
+{
+  "timestamp": "2025-03-20T11:00:15.744Z",
+  "method": "GET",
+  "url": "http://localhost:3000/",
+  "headers": {
+    "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "content-type": null
+  }
+}
+
+
+[INFO] Response Sent - GET
+{
+  "timestamp": "2025-03-20T11:00:15.753Z",
+  "method": "GET",
+  "url": "http://localhost:3000/",
+  "status": 200,
+  "duration": "10ms"
+}
+
+
+```
+
+### Conclusion
+
+Using loggers in DieselJS enhances request tracking, making debugging easier and providing performance insights. The logger(app) is ideal for basic logging, while advancedLogger(app) offers detailed request and response data. Choose the one that best fits your needs!

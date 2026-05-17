@@ -1,0 +1,122 @@
+---
+title: Understanding Middleware
+---
+
+
+Middleware functions act as interceptors between incoming requests and outgoing responses. They’re powerful tools that enable:
+
+## How Middleware Works
+
+Middleware functions can:
+
+- **Request validation**: Validate incoming data before proceeding to the route handler.
+- **Authentication and authorization**: Check if users have the proper credentials.
+- **Logging and debugging**: Track requests for analytics or debugging.
+- **Error handling**: Capture errors early in the request-response cycle.
+
+Middleware is generally applied to routes or groups of routes, and each piece of middleware in the chain can pass the request to the next handler, allowing layered processing.
+
+## Example: JWT Authentication Middleware
+
+Here’s a basic authentication middleware using JWT. Note that we don't need `next()` here. If a token is missing or invalid, the function returns early with a response; otherwise, it proceeds:
+
+import {Code} from '@astrojs/starlight/components';
+
+export const exampleCode = `
+async function authJwt(ctx: ContextType, server?: Server): Promise<void | Response> {
+  try {
+    const token = ctx.getCookie("accessToken");
+    
+    if (!token) {
+      return ctx.json({ message: "Authentication token missing" },401);
+    }
+    
+    // Verify the JWT token using a secret key
+    const user = jwt.verify(token, secret);
+    ctx.set('user', user);  // Store the user in the context
+  } catch (error) {
+    return ctx.json({ message: "Invalid token" },403);
+  }
+}
+`;
+export const fileName = `auth.ts`;
+export const highlights = ['file', 'CMS'];
+
+<Code code={exampleCode} lang='ts' title={fileName} mark={highlights}/>
+
+**In this example**
+* **No `next` nonsense** : Once conditions are met, the middleware proceeds ,there is no need to call  nonsense `next` function.
+* **Immediate return** : If authentication fails, the request cycle stops, and an error response is sent to the client.
+
+### Using Middleware
+**You can apply middleware to the entire app or specific routes:**
+```typescript
+// Global middleware
+app.use(authJwt);
+
+// Route-specific middleware
+app.use("/user", authJwt);
+```
+### Using Multiple Middleware Functions
+
+**Diesel supports chaining multiple middleware functions in a single `app.use` call. Middleware functions are executed in the order they are provided:**
+
+```typescript
+// Applying multiple middleware globally
+app.use([middleware1, middleware2, middleware3]);
+
+// Applying multiple middleware to a specific path
+app.use("/user", [middleware1, middleware2]);
+
+app.use(["/user","/home"],[middleware1, middleware2])
+```
+### Route-specific Middleware in Handler Method
+
+**In addition to `app.use`, you can attach middleware directly to individual routes. This allows for fine-tuned control, applying middleware only to specific requests.**
+
+#### Example Usage
+**Imagine you have an authentication middleware `authJwt`, which you only want to apply to specific routes. You can set it up like this:**
+
+```typescript
+// Define an endpoint with middleware
+app.get("/user", authJwt, (ctx:ContextType) => {
+  // Authenticated route logic
+  return ctx.json({ message: "Welcome, authenticated user!" });
+});
+
+// You can add multiple middleware functions as needed
+app.post("/post", authJwt, requestLogger, (ctx:ContextType) => {
+  return ctx.json({ message: "Your post was successfully created!" });
+});
+```
+**Here**:
+* `authJwt` checks for user authentication.
+* Additional middleware `(e.g., requestLogger)` can be added in the same line, providing flexibility.
+* The main handler `(ctx) => {}` only runs if all middleware calls successfully proceed.
+
+
+
+### Other Middleware Example
+
+1. **Logging Middleware**
+This logs request details:
+
+```typescript
+function requestLogger(ctx) {
+  console.log(`[${new Date().toISOString()}] ${ctx.req.method} ${ctx.req.url}`);
+}
+```
+Apply it globally to log every request:
+```typescript
+app.use(requestLogger);
+```
+**Although you can use `onRequest()` hook to log incoming req details , 
+which we will know in next section**  
+
+
+# Summary
+**Middleware in Diesel and other frameworks is powerful without `next()` handling:**
+* **Early return**: If conditions aren’t met, simply return the response.
+* **Proceeding**: By not returning, you continue to the next part of the middleware stack or route handler.
+
+Middleware enhances your application’s functionality by allowing modular, reusable processing for requests and responses, ultimately creating a scalable, manageable application structure.

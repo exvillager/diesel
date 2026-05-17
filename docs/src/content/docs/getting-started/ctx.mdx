@@ -1,0 +1,104 @@
+---
+title: Understanding `ctx` Context
+---
+
+## Overview
+The `ctx` context is an essential object that provides various methods and properties for handling requests and responses in your application. It simplifies request handling, response formatting, and state management within the server.
+
+## Properties
+
+- **req**: The incoming request object.
+- **server**: The server instance.
+- **url**: The URL of the request.
+- **headers**: Custom headers applied to the response.
+- **query**: Parsed query parameters.
+- **params**: Extracted route parameters.
+- **cookies**: Parsed cookies from the request.
+- **body**: The parsed request body.
+
+## Methods
+
+### Request Handling
+- **get ip**: Retrieves the client's IP address.
+  ```typescript
+  const clientIP = ctx.ip;
+  ```
+- **get query**: Retrieves parsed query parameters.
+  ```typescript
+  const queryParams = ctx.query;
+  const queryParam = ctx.query?.name;
+  ```
+- **get params**: Retrieves dynamic route parameters.
+  ```typescript
+  const routeParams = ctx.params;
+  const routeParam = ctx.params?.paramsName
+  ```
+- **get body**: Retrieves the parsed request body.
+  ```typescript
+  const body = await ctx.body;
+  ```
+
+### Response Handling
+- **setHeader(key, value)**: Sets a response header.
+  ```typescript
+  ctx.setHeader("Content-Type", "application/json");
+  ```
+- **removeHeader(key)**: Removes a response header.
+  ```typescript
+  ctx.removeHeader("Cache-Control");
+  ```
+- **text(data, status?)**: Sends a plain text response.
+  ```typescript
+  ctx.text("Hello, World!", 200);
+  ```
+- **json(data, status?)**: Sends a JSON response.
+  ```typescript
+  ctx.json({ message: "Success" }, 200);
+  ```
+- **send(data, status?)**: Sends a response with appropriate MIME type.
+  ```typescript
+  ctx.send({ key: "value" }, 200);
+  ```
+- **file(filePath, status?, mimeType?)**: Serves a file response.
+  ```typescript
+  ctx.file("./downloads/sample.pdf", 200);
+  ```
+- **redirect(path, status?)**: Redirects to a specified path.
+  ```typescript
+  ctx.redirect("/login", 302);
+  ```
+
+### Context Management
+- **set(key, value)**: Stores a key-value pair in the context.
+  ```typescript
+  ctx.set("user", { username: "abcd", email: "abcd@gmail.com" });
+  ```
+- **get(key)**: Retrieves a value from the context.
+  ```typescript
+  const user = ctx.get("user");
+  ```
+
+### Cookie Handling
+- **setCookie(name, value, options?)**: Sets a cookie in the response.
+  ```typescript
+  ctx.setCookie("session", "abc123", { httpOnly: true, secure: true });
+  ```
+- **get cookies**: Retrieves parsed cookies from the request.
+  ```typescript
+  const userToken = ctx.cookies?.session;
+  ```
+
+## Example Usage
+
+```typescript
+app.get("/profile", async (ctx) => {
+  const user = ctx.get("user");
+  if (!user) {
+    return ctx.json({ error: "Unauthorized" }, 401);
+  }
+  return ctx.json({ profile: user });
+});
+```
+
+This documentation provides a structured and clear explanation of `ctx` functionalities to help developers effectively utilize it in their applications.
+

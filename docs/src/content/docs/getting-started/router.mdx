@@ -1,0 +1,85 @@
+---
+title: Router Overview
+---
+
+In this document, we will cover the basic HTTP methods used in routing (GET, POST, etc.) and how to implement sub-routing in your application using the `app.register` method.
+
+## HTTP Methods
+
+#### Example:
+
+```typescript
+
+app.get('/home', (ctx:ContextType) => {
+  ctx.text('Welcome to the home page!');
+})
+
+app.post("/upload",(ctx:ContextType) => {
+    // your logic here
+})
+
+app.put("/update",(ctx:ContextType) => {
+    // your logic here
+})
+
+app.patch("/patch",(ctx:ContextType) => {
+    // your logic here
+})
+
+app.delete("/delete-user",(ctx:ContextType) => {
+    // your logic here
+})
+
+```
+
+## Sub-Routing in Diesel
+**In Diesel, you can implement sub-routing by creating a new Diesel instance and registering routes using the `app.route()` or `app.register()` method.** 
+
+
+### 1. Example with new Diesel()
+
+import {Code} from '@astrojs/starlight/components';
+export const newDieselCode = `
+import {Diesel} from "diesel-core";
+
+export const UserRoute = new Diesel();
+
+
+UserRoute.get("/register/:id",(ctx:ContextType) => {
+  return ctx.text('User registered with ID: ' + ctx.getParams('id'));
+})
+
+UserRoute.get("/login",(ctx:ContextType)=>{
+  return ctx.text("hello loin")
+})
+`
+export const fileName = `user.route.ts`;
+export const highlights = ['file', 'CMS'];
+
+<Code code={newDieselCode} lang='ts' title={fileName} mark={highlights}/>
+
+
+**Registering Sub-Routes in the Main Application**
+
+```typescript
+import {UserRoute} from 'user.route.ts'
+
+app.route("/api/v1/user",UserRoute)
+
+OR 
+
+app.register("/api/v1/user",UserRoute)
+```
+
+**The `app.register()` & `app.route()` Method**
+
+**takes two arguments**
+1. **path** : The base path where you want to group all your specific routes (e.g., /api/v1/user).
+2. **Router instance** : The router instance containing the routes you want to register (e.g., UserRoute).
+
+This structure allows for better organization and modularization of your route definitions, leading to cleaner and more manageable code.
+
+### Conclusion
+
+**By understanding and utilizing HTTP methods along with sub-routing, you can create a well-structured and efficient routing system in your application. This approach not only enhances the clarity of your routes but also promotes better code organization.**
+

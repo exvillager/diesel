@@ -1,0 +1,44 @@
+---
+title: Middleware Example
+description: Learn how to implement JWT authentication middleware in Diesel.js.
+---
+
+## Middleware Overview
+
+Middleware functions in Diesel.js allow you to run code before your request reaches the endpoint. In this example, we'll create a middleware for JWT authentication, ensuring that every request is validated without unnecessary calls to `next()`. If everything goes well, the middleware will simply proceed without returning anything.
+
+## JWT Authentication Middleware
+
+### Implementation
+
+Here’s how to create a global JWT authentication middleware in Diesel.js:
+
+```javascript
+import jwt from 'jsonwebtoken';
+import { ContextType, Server, Response } from 'your-types'; // Adjust the import based on your type definitions
+
+const secret = 'your_secret_key'; // Replace with your actual secret key
+
+async function authJwt(ctx: ContextType, server?: Server): Promise<void | Response> {
+  try {
+    const token = ctx?.getCookie("accessToken");
+    
+    // Check if the token is missing
+    if (!token) {
+      return ctx.status(401).json({ message: "Authentication token missing" });
+    }
+
+    // Verify the JWT token using the secret key
+    const user = jwt.verify(token, secret);
+    ctx.set('user', user); // Set the user object in the context for later use
+  } catch (error) {
+    // Handle invalid token scenario
+    return ctx.status(403).json({ message: "Invalid token" });
+  }
+}
+
+// Use the middleware globally for all routes
+app.use(authJwt);
+
+// Example of path-specific middleware
+app.use("/user", authJwt);

@@ -1,0 +1,32 @@
+---
+title: CORS Configuration
+---
+
+# CORS Configuration
+
+Cross-Origin Resource Sharing (CORS) is a mechanism that allows restricted resources on a web page to be requested from another domain outside the domain from which the first resource was served.
+
+## Basic Configuration
+
+To enable CORS, you need to configure your server to allow requests from specific origins. Here's how to set it up...
+
+## Example
+
+Here’s an example of how to set CORS headers in an Express.js application:
+
+```javascript
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+
+// Enable CORS for all routes
+app.use(cors());
+
+app.get('/api/data', (req, res) => {
+    res.json({ message: 'This is CORS-enabled for all origins!' });
+});
+
+app.listen(3000, () => {
+    console.log('Server running on port 3000');
+});

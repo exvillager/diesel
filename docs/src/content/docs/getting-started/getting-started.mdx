@@ -1,0 +1,94 @@
+---
+title: Getting Started with Diesel
+---
+
+Diesel is a simple and lightweight HTTP server library for Bun.js that provides you with complete control over your API routes and middleware. It is designed to be intuitive and efficient, allowing you to quickly set up a server, define routes, and optimize important paths for faster response times.
+
+With built-in support for TypeScript, DieselJS ensures type safety and improved developer experience, making it easier to catch errors during development. Whether you are building a small application or a large API, DieselJS helps you manage your routes and middleware seamlessly.
+## Quick Start
+
+You can install Diesel from npm:
+
+
+```bash
+npm install diesel-core
+```
+```bash
+bun add diesel-core
+```
+```bash
+yarn add diesel-core
+```
+```bash
+pnpm install diesel-core
+```
+
+### Code Example
+
+import {Code} from '@astrojs/starlight/components';
+
+export const mainCode = `
+import {Diesel}  from "diesel-core"
+
+const app = new Diesel()
+const port = 3000
+
+app.get("/", async (ctx:ContextType) => {
+ return ctx.text("Hello world...!")
+});
+
+
+// Start the server
+app.listen(port, () => {
+  console.log('diesel is running on port '+port)
+})
+`;
+
+export const fileName = `main.ts`;
+export const highlights = ['file', 'CMS'];
+
+<Code code = {mainCode} lang='ts' title={fileName} mark={highlights} />
+
+## Html files serving
+
+**In Diesel now You can directly serve html files via *`app.static()`* method**
+  * `app.static()` method needs an object that cantains path and html file
+  * `{"/": HtmlFileLocation , "/about": aboutPageLocation}`
+
+*Example*
+```javascript
+import homePage from "./templates/index.html"
+import aboutPage from "./templates/about.html"
+
+app.static(
+  {
+    "/" : homePage,
+    "/about" : aboutPage
+  }
+)
+```
+**And that's it , it's so easy to build full stack application with bun + diesel now**
+
+### server static files and Single Page Application
+  * public folder can have -> html , css , javascript files
+
+  * in app.serveStatic add -> import.meta.dir+"/public"
+
+```typescript
+
+app.serveStatic(import.meta.dir+"/staticFolder");
+
+app.get("*", (ctx) => {
+// your Application such as React,Vuejs built entry point-> index.html
+ return ctx.file("${import.meta.dir}/public/index.html");
+ });
+
+OR 
+
+const publicPath = path.resolve(__dirname, "public");
+app.serveStatic(publicPath);
+
+app.get("*", (ctx) => {
+  return ctx.file(path.join(publicPath, "index.html"));
+});
+```
