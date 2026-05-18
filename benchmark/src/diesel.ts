@@ -8,6 +8,10 @@ app.on("user:created", (userId: string) => {
   console.log("User created:", userId);
 });
 
+app.use("/user/ok", () => {
+  console.log("user midl")
+})
+
 // Emit it from inside a route handler
 app.get("/user", (ctx: Context) => {
   // ... create user logic
@@ -28,5 +32,12 @@ for (let i = 1; i <= 1000; i++) {
 app.get("/user/:id/post/:postId", (c: Context) => {
   return c.json({ userId: c.params.id, postId: c.params.postId });
 });
+
+app.get("/user/:id", (c:Context) => {
+  return c.text("from id "+c.params.id)
+})
+app.get("/user/:name", (c:Context) => {
+  return c.text("from name "+c.params.name)
+})
 
 app.listen(3000);

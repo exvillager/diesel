@@ -38,8 +38,6 @@ export class TrieRouter {
       let key = element;
       if (element.startsWith(":")) {
         key = ":";
-      } else if (element.startsWith("*")) {
-        node.middlewares.push(...handlers);
       }
 
       if (!node.children[key]) node.children[key] = new TrieNodes();
@@ -107,14 +105,24 @@ export class TrieRouter {
       if (element.length === 0) {
         continue;
       }
+
+      const wildcardChild = node.children["*"];
       if (node.children[element]) {
+        if (wildcardChild) {
+          const mw = wildcardChild.middlewares;
+          for (let j = 0; j < mw.length; j++) collected_middlewares.push(mw[j]);
+        }
         node = node.children[element]!;
       } else if (node.children[":"]) {
+        if (wildcardChild) {
+          const mw = wildcardChild.middlewares;
+          for (let j = 0; j < mw.length; j++) collected_middlewares.push(mw[j]);
+        }
         node = node.children[":"];
         if (!paramObject) paramObject = {};
         paramObject[node.paramName] = element;
-      } else if (node.children["*"]) {
-        node = node.children["*"];
+      } else if (wildcardChild) {
+        node = wildcardChild;
         break;
       } else {
         return {
@@ -123,12 +131,12 @@ export class TrieRouter {
           handler: undefined,
         };
       }
+    }
 
-      if (node.middlewares.length > 0) {
-        const mw = node.middlewares;
-        for (let j = 0; j < mw.length; j++) {
-          collected_middlewares.push(mw[j]);
-        }
+    if (node.middlewares.length > 0) {
+      const mw = node.middlewares;
+      for (let j = 0; j < mw.length; j++) {
+        collected_middlewares.push(mw[j]);
       }
     }
 
@@ -148,7 +156,6 @@ export class TrieRouter {
         handler: node.handlers[ALL_METHOD],
       };
     }
-
     return {
       params: paramObject,
       middlewares: collected_middlewares,

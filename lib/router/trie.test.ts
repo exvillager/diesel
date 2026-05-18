@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeAll } from "bun:test";
-import { ContextType } from "../types";
 import { TrieRouter } from "./trie";
+import type { ContextType } from "../types";
 
 let router: TrieRouter;
 
@@ -201,5 +201,34 @@ describe("TrieRouter - with Middlewares check", () => {
     if (result2.handler) output = result2.handler[0](ctx2);
 
     expect(output).toBe("user/static");
+  });
+});
+
+describe("path mid check", () => {
+  let router: TrieRouter;
+  beforeAll(() => {
+    router = new TrieRouter();
+    // /pradeep only midl , it shouldnt run for /pradeep/anyting
+    router.addMiddleware("/pradeep", () => {});
+    router.add("GET", "/pradeep/ok", () => {});
+
+    router.addMiddleware("/user/*", () => {});
+    router.add("GET", "/user/me", () => {});
+  });
+
+  test("it should not run include middleware at all ", () => {
+    const result = router.find("GET", "/pradeep/ok");
+    expect(result.middlewares).toHaveLength(0);
+  });
+
+  test("it should have midl ", () => {
+    const result = router.find("GET", "/pradeep/");
+    expect(result.middlewares).toHaveLength(1);
+  });
+
+  test("it should have midl /user/** ", () => {
+    const result = router.find("GET", "/user/me");
+    expect(result.middlewares).toHaveLength(1);
+    expect(result.handler).toHaveLength(1)
   });
 });
