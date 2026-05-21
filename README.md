@@ -2,6 +2,8 @@
 
 ### [Read the docs](https://diesel-core.vercel.app/)
 
+[![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/pradeepxyz)
+
 # DieselJS
 
 

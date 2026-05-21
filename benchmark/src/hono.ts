@@ -2,17 +2,14 @@ import { Hono } from 'hono'
 
 const hono_app = new Hono()
 
-hono_app.use("/user/*", (c,next) => {
-  console.log("user midl")
-  next()
-})
-
 hono_app.get('/', (c) => {
   return c.json({ message: "Hello Hono!", framework: "hono" });
 });
+
 hono_app.get("/user/:id", (c) => {
   return c.text("from id "+c.req.param("id"))
 })
+
 hono_app.get("/users/:name", (c) => {
   return c.text("from name "+c.req.param("name"))
 })
@@ -20,7 +17,7 @@ hono_app.get("/users/:name", (c) => {
 for (let i = 1; i <= 1000; i++) {
   hono_app.get(`/route/${i}`, (c) => {
     return c.json({ route: i });
-  });
+ });
 }
 
 hono_app.get('/user/:id/post/:postId', (c) => {

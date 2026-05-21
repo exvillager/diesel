@@ -67,7 +67,7 @@ export async function handleFilterRequest(
     path = path.slice(0, -1);
   }
 
-  if (!diesel.filters.has(path)) {
+  if (!diesel.filters!.has(path)) {
     if (diesel.filterFunction?.length) {
       for (const filterFunction of diesel.filterFunction) {
         const filterResult = await filterFunction(ctx);
@@ -85,7 +85,7 @@ export async function handleBunFilterRequest(
   req: Request,
   server: Server) {
 
-  if (!diesel.filters.has(path)) {
+  if (!diesel.filters!.has(path)) {
     if (diesel.filterFunction?.length) {
       for (const filterFunction of diesel.filterFunction) {
         const filterResult = await filterFunction(req as any, server);
