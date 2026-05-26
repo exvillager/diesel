@@ -2,84 +2,127 @@
 title: Router Overview
 ---
 
-In this document, we will cover the basic HTTP methods used in routing (GET, POST, etc.) and how to implement sub-routing in your application using the `app.register` method.
+In this document, we will cover the HTTP methods used in routing (GET, POST, etc.) and how to implement sub-routing in your application.
 
 ## HTTP Methods
 
-#### Example:
+Diesel supports all standard HTTP methods:
 
 ```typescript
-
-app.get('/home', (ctx:ContextType) => {
-  ctx.text('Welcome to the home page!');
+app.get('/home', (ctx: ContextType) => {
+  return ctx.text('Welcome to the home page!');
 })
 
-app.post("/upload",(ctx:ContextType) => {
+app.post("/upload", (ctx: ContextType) => {
     // your logic here
 })
 
-app.put("/update",(ctx:ContextType) => {
+app.put("/update", (ctx: ContextType) => {
     // your logic here
 })
 
-app.patch("/patch",(ctx:ContextType) => {
+app.patch("/patch", (ctx: ContextType) => {
     // your logic here
 })
 
-app.delete("/delete-user",(ctx:ContextType) => {
+app.delete("/delete-user", (ctx: ContextType) => {
     // your logic here
 })
 
+app.head("/check", (ctx: ContextType) => {
+    // your logic here
+})
+
+app.options("/options", (ctx: ContextType) => {
+    // your logic here
+})
+
+// matches any HTTP method
+app.any("/catch-all", (ctx: ContextType) => {
+    return ctx.json({ method: ctx.req.method });
+})
+```
+
+### Register a route for multiple methods at once
+
+Use `app.onMethod()` to handle one or more HTTP methods on a single path:
+
+```typescript
+app.onMethod(["GET", "POST"], "/data", (ctx: ContextType) => {
+  return ctx.json({ method: ctx.req.method });
+});
+```
+
+### Route-level redirect
+
+```typescript
+// Redirects all requests to /old-path → /new-path (preserves params and query)
+app.redirect("/old-path", "/new-path");
 ```
 
 ## Sub-Routing in Diesel
-**In Diesel, you can implement sub-routing by creating a new Diesel instance and registering routes using the `app.route()` or `app.register()` method.** 
 
+Diesel offers two approaches for sub-routing: `app.route()` (merges routes) and `app.sub()` (recommended, keeps routers isolated).
 
-### 1. Example with new Diesel()
+### Using `app.sub()` (Recommended)
+
+`app.sub()` is the recommended way to compose sub-routers. It keeps the child router's middleware isolated to its own routes.
 
 import {Code} from '@astrojs/starlight/components';
 export const newDieselCode = `
-import {Diesel} from "diesel-core";
+import { Diesel } from "diesel-core";
 
-export const UserRoute = new Diesel();
+export const userRoute = new Diesel();
 
+userRoute.get("/register/:id", (ctx: ContextType) => {
+  return ctx.text('User registered with ID: ' + ctx.params.id);
+});
 
-UserRoute.get("/register/:id",(ctx:ContextType) => {
-  return ctx.text('User registered with ID: ' + ctx.getParams('id'));
-})
-
-UserRoute.get("/login",(ctx:ContextType)=>{
-  return ctx.text("hello loin")
-})
+userRoute.get("/login", (ctx: ContextType) => {
+  return ctx.text("Login route");
+});
 `
 export const fileName = `user.route.ts`;
 export const highlights = ['file', 'CMS'];
 
 <Code code={newDieselCode} lang='ts' title={fileName} mark={highlights}/>
 
-
-**Registering Sub-Routes in the Main Application**
+**Mounting the sub-router in the main app:**
 
 ```typescript
-import {UserRoute} from 'user.route.ts'
+import { userRoute } from './user.route';
 
-app.route("/api/v1/user",UserRoute)
-
-OR 
-
-app.register("/api/v1/user",UserRoute)
+// All userRoute routes will be prefixed with /api/v1/user
+app.sub("/api/v1/user", userRoute);
 ```
 
-**The `app.register()` & `app.route()` Method**
+### Using `app.route()`
 
-**takes two arguments**
-1. **path** : The base path where you want to group all your specific routes (e.g., /api/v1/user).
-2. **Router instance** : The router instance containing the routes you want to register (e.g., UserRoute).
+`app.route()` merges the child router's routes into the parent. Useful when you want the child's middleware to also apply at the parent level.
 
-This structure allows for better organization and modularization of your route definitions, leading to cleaner and more manageable code.
+```typescript
+import { userRoute } from './user.route';
+
+app.route("/api/v1/user", userRoute);
+```
+
+**`app.route()` takes two arguments:**
+1. **path**: The base path prefix (e.g., `/api/v1/user`).
+2. **Router instance**: The Diesel instance containing the routes to register.
+
+### Mounting 3rd-party handlers with `app.mount()`
+
+`app.mount()` lets you integrate any fetch-compatible handler (e.g., another Diesel app or a Hono app) under a path prefix:
+
+```typescript
+import { Diesel } from "diesel-core";
+import anotherApp from "./another-app";
+
+// All requests to /legacy/* are forwarded to anotherApp
+app.mount("/legacy", anotherApp);
+```
 
 ### Conclusion
 
-**By understanding and utilizing HTTP methods along with sub-routing, you can create a well-structured and efficient routing system in your application. This approach not only enhances the clarity of your routes but also promotes better code organization.**
+**By understanding and utilizing HTTP methods along with sub-routing, you can create a well-structured and efficient routing system. Use `app.sub()` for isolated child routers, `app.route()` for merged routers, and `app.mount()` for integrating 3rd-party handlers.**
 

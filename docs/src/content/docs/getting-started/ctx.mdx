@@ -7,85 +7,101 @@ The `ctx` context is an essential object that provides various methods and prope
 
 ## Properties
 
-- **req**: The incoming request object.
-- **server**: The server instance.
-- **url**: The URL of the request.
-- **headers**: Custom headers applied to the response.
-- **query**: Parsed query parameters.
-- **params**: Extracted route parameters.
-- **cookies**: Parsed cookies from the request.
-- **body**: The parsed request body.
+- **req**: The incoming `Request` object.
+- **server**: The Bun `Server` instance (undefined in Cloudflare Workers).
+- **path**: The request pathname (e.g. `/api/users`).
+- **url**: Lazily parsed `URL` object for the request.
+- **env**: Environment bindings (available in Cloudflare Workers).
+- **executionContext**: Cloudflare Workers execution context.
+- **headers**: Custom response headers accumulated via `setHeader()`.
+- **query**: Parsed query parameters (lazily computed).
+- **params**: Extracted dynamic route parameters.
+- **cookies**: Parsed cookies from the request (lazily computed).
+- **body**: The parsed request body (lazily computed Promise).
+- **ip**: The client's IP address.
 
 ## Methods
 
 ### Request Handling
-- **get ip**: Retrieves the client's IP address.
+- **get ip**: Retrieves the client's IP address. Uses Bun's `server.requestIP()` or the `CF-Connecting-IP` header on Cloudflare.
   ```typescript
   const clientIP = ctx.ip;
   ```
-- **get query**: Retrieves parsed query parameters.
+- **get query**: Retrieves parsed query parameters as a plain object.
   ```typescript
   const queryParams = ctx.query;
-  const queryParam = ctx.query?.name;
+  const name = ctx.query.name;
   ```
 - **get params**: Retrieves dynamic route parameters.
   ```typescript
-  const routeParams = ctx.params;
-  const routeParam = ctx.params?.paramsName
+  const id = ctx.params.id;
   ```
-- **get body**: Retrieves the parsed request body.
+- **get body**: Retrieves the parsed request body. Supports JSON, URL-encoded, and multipart form data.
   ```typescript
   const body = await ctx.body;
   ```
 
 ### Response Handling
-- **setHeader(key, value)**: Sets a response header.
+- **setHeader(key, value)**: Sets a custom response header. Returns `this` for chaining.
   ```typescript
-  ctx.setHeader("Content-Type", "application/json");
+  ctx.setHeader("X-Custom-Header", "value");
   ```
-- **removeHeader(key)**: Removes a response header.
+- **removeHeader(key)**: Removes a previously set response header.
   ```typescript
   ctx.removeHeader("Cache-Control");
   ```
-- **text(data, status?)**: Sends a plain text response.
+- **text(data, status?, customHeaders?)**: Sends a plain text response.
   ```typescript
-  ctx.text("Hello, World!", 200);
+  return ctx.text("Hello, World!", 200);
+  return ctx.text("Not found", 404, { "X-Info": "missing" });
   ```
-- **json(data, status?)**: Sends a JSON response.
+- **json(data, status?, customHeaders?)**: Sends a JSON response.
   ```typescript
-  ctx.json({ message: "Success" }, 200);
+  return ctx.json({ message: "Success" }, 200);
+  return ctx.json({ error: "Not found" }, 404, { "X-Info": "missing" });
   ```
-- **send(data, status?)**: Sends a response with appropriate MIME type.
+- **send(data, status?, customHeaders?)**: Sends a response with an automatically detected MIME type (JSON, text, or binary).
   ```typescript
-  ctx.send({ key: "value" }, 200);
+  return ctx.send({ key: "value" }, 200);
+  return ctx.send("plain text");
+  return ctx.send(uint8Array, 200);
   ```
-- **file(filePath, status?, mimeType?)**: Serves a file response.
+- **file(filePath, mimeType?, status?, customHeaders?)**: Serves a file as a response.
   ```typescript
-  ctx.file("./downloads/sample.pdf", 200);
+  return ctx.file("./downloads/sample.pdf");
+  return ctx.file("./image.png", "image/png", 200);
   ```
-- **redirect(path, status?)**: Redirects to a specified path.
+- **redirect(path, status?)**: Redirects to a specified path. Default status is `302`.
   ```typescript
-  ctx.redirect("/login", 302);
+  return ctx.redirect("/login");
+  return ctx.redirect("/new-page", 301);
+  ```
+- **stream(callback)**: Sends a streaming response via `ReadableStream`.
+  ```typescript
+  return ctx.stream((controller) => {
+    controller.enqueue(new TextEncoder().encode("chunk 1"));
+    controller.enqueue(new TextEncoder().encode("chunk 2"));
+  });
   ```
 
 ### Context Management
-- **set(key, value)**: Stores a key-value pair in the context.
+- **set(key, value)**: Stores a typed value in the request-scoped context.
   ```typescript
-  ctx.set("user", { username: "abcd", email: "abcd@gmail.com" });
+  ctx.set("user", { id: 1, name: "Alice" });
   ```
-- **get(key)**: Retrieves a value from the context.
+- **get(key)**: Retrieves a value from the request-scoped context.
   ```typescript
-  const user = ctx.get("user");
+  const user = ctx.get<{ id: number; name: string }>("user");
   ```
 
 ### Cookie Handling
-- **setCookie(name, value, options?)**: Sets a cookie in the response.
+- **setCookie(name, value, options?)**: Appends a `Set-Cookie` header. Returns `this` for chaining.
   ```typescript
-  ctx.setCookie("session", "abc123", { httpOnly: true, secure: true });
+  ctx.setCookie("session", "abc123", { httpOnly: true, secure: true, sameSite: "Strict" });
   ```
-- **get cookies**: Retrieves parsed cookies from the request.
+- **get cookies**: Retrieves all cookies from the request as a plain object.
   ```typescript
-  const userToken = ctx.cookies?.session;
+  const token = ctx.cookies.accessToken;
   ```
 
 ## Example Usage

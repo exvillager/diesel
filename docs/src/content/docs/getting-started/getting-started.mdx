@@ -49,46 +49,61 @@ export const highlights = ['file', 'CMS'];
 
 <Code code = {mainCode} lang='ts' title={fileName} mark={highlights} />
 
-## Html files serving
+## DieselOptions
 
-**In Diesel now You can directly serve html files via *`app.static()`* method**
-  * `app.static()` method needs an object that cantains path and html file
-  * `{"/": HtmlFileLocation , "/about": aboutPageLocation}`
-
-*Example*
-```javascript
-import homePage from "./templates/index.html"
-import aboutPage from "./templates/about.html"
-
-app.static(
-  {
-    "/" : homePage,
-    "/about" : aboutPage
-  }
-)
-```
-**And that's it , it's so easy to build full stack application with bun + diesel now**
-
-### server static files and Single Page Application
-  * public folder can have -> html , css , javascript files
-
-  * in app.serveStatic add -> import.meta.dir+"/public"
+You can pass options to the `Diesel` constructor to configure its behaviour:
 
 ```typescript
+const app = new Diesel({
+  logger: true,             // enable built-in request/response logger
+  platform: "bun",          // "bun" (default) | "cf" (Cloudflare Workers)
+  errorFormat: "json",      // "json" (default) | "text"
+  jwtSecret: "my-secret",   // secret used by authenticateJwt / authenticateJwtDB
+  idleTimeOut: 10,          // Bun server idle timeout in seconds
+  baseApiUrl: "/api/v1",    // prefix added to all file-based routes
+  prefixApiUrl: "",         // prefix added to all routes
+  enableFileRouting: false, // enable file-based routing (src/routes/)
+  pipelineArchitecture: false, // enable new pipeline architecture (experimental)
+  onError: false,           // log errors automatically with console.error
+  router: "t2",             // router implementation to use
+});
+```
 
-app.serveStatic(import.meta.dir+"/staticFolder");
+## HTML files serving (Bun native static routing)
 
+Serve HTML files directly via Bun's native static routing using `app.staticHtml()`:
+
+```typescript
+import homePage from "./templates/index.html";
+import aboutPage from "./templates/about.html";
+
+app.staticHtml({
+  "/" : homePage,
+  "/about" : aboutPage,
+});
+```
+
+**This is the fastest way to serve HTML — Bun handles it natively without going through the Diesel request pipeline.**
+
+## Serve a static files directory
+
+Use `app.static()` to serve files from a directory on the filesystem:
+
+```typescript
+// Serve files from ./public under any path
+app.static(import.meta.dir + "/public");
+
+// Serve files from ./public only under /assets/*
+app.static(import.meta.dir + "/public", "/assets");
+```
+
+## Single Page Application (SPA) support
+
+```typescript
+app.static(import.meta.dir + "/public");
+
+// Catch-all: return the SPA entry point for client-side routing
 app.get("*", (ctx) => {
-// your Application such as React,Vuejs built entry point-> index.html
- return ctx.file("${import.meta.dir}/public/index.html");
- });
-
-OR 
-
-const publicPath = path.resolve(__dirname, "public");
-app.serveStatic(publicPath);
-
-app.get("*", (ctx) => {
-  return ctx.file(path.join(publicPath, "index.html"));
+  return ctx.file(import.meta.dir + "/public/index.html");
 });
 ```

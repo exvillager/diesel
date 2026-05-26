@@ -5,40 +5,63 @@ description: Learn how to implement JWT authentication middleware in Diesel.js.
 
 ## Middleware Overview
 
-Middleware functions in Diesel.js allow you to run code before your request reaches the endpoint. In this example, we'll create a middleware for JWT authentication, ensuring that every request is validated without unnecessary calls to `next()`. If everything goes well, the middleware will simply proceed without returning anything.
+Middleware functions in Diesel.js allow you to run code before your request reaches the endpoint. There is no `next()` — if everything is fine, simply don't return anything and Diesel will proceed to the next handler. To stop the request (e.g., unauthorized), return a `Response`.
 
 ## JWT Authentication Middleware
 
 ### Implementation
 
-Here’s how to create a global JWT authentication middleware in Diesel.js:
-
-```javascript
+```typescript
 import jwt from 'jsonwebtoken';
-import { ContextType, Server, Response } from 'your-types'; // Adjust the import based on your type definitions
+import type { ContextType } from 'diesel-core';
 
-const secret = 'your_secret_key'; // Replace with your actual secret key
+const secret = 'your_secret_key';
 
-async function authJwt(ctx: ContextType, server?: Server): Promise<void | Response> {
+async function authJwt(ctx: ContextType): Promise<void | Response> {
   try {
-    const token = ctx?.getCookie("accessToken");
-    
-    // Check if the token is missing
+    const token = ctx.cookies.accessToken;
+
     if (!token) {
-      return ctx.status(401).json({ message: "Authentication token missing" });
+      return ctx.json({ message: "Authentication token missing" }, 401);
     }
 
-    // Verify the JWT token using the secret key
     const user = jwt.verify(token, secret);
-    ctx.set('user', user); // Set the user object in the context for later use
+    ctx.set('user', user); // Store user in context for downstream handlers
   } catch (error) {
-    // Handle invalid token scenario
-    return ctx.status(403).json({ message: "Invalid token" });
+    return ctx.json({ message: "Invalid token" }, 403);
   }
 }
 
-// Use the middleware globally for all routes
+// Apply globally to all routes
 app.use(authJwt);
 
-// Example of path-specific middleware
+// Apply only to a specific path
 app.use("/user", authJwt);
+```
+
+## Using Multiple Middleware
+
+```typescript
+app.use(authJwt, rateLimiter); // global, chained
+
+app.use("/user", authJwt, rateLimiter); // path-specific, chained
+
+app.use(["/user", "/home"], [authJwt, rateLimiter]); // multiple paths, multiple middleware
+```
+
+## Inline Route Middleware
+
+You can attach middleware directly to a route handler:
+
+```typescript
+app.get("/user/profile", authJwt, (ctx: ContextType) => {
+  const user = ctx.get("user");
+  return ctx.json({ profile: user });
+});
+
+app.post("/post", authJwt, requestLogger, (ctx: ContextType) => {
+  return ctx.json({ message: "Post created" });
+});
+```
+
+All middleware in the chain runs in order. The main handler only runs if none of the middleware returns a `Response`.

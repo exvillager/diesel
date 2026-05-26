@@ -25,7 +25,7 @@ import {Code} from '@astrojs/starlight/components';
 export const exampleCode = `
 async function authJwt(ctx: ContextType, server?: Server): Promise<void | Response> {
   try {
-    const token = ctx.getCookie("accessToken");
+    const token = ctx.cookies.accessToken;
     
     if (!token) {
       return ctx.json({ message: "Authentication token missing" },401);

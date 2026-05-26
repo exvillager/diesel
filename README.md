@@ -90,98 +90,99 @@ serve({
 
 # CORS
 
-### Diesel supports cors out of the box
+### Diesel supports CORS out of the box
 
 ``` ts
-app.use(cors{
-  origin: ['http://localhost:5173','*'],
-  methods: ['GET','POST','PUT','DELETE'],
-  allowedHeaders: ['Content-Type','Authorization']
-})
+import { cors } from "diesel-core/cors";
+
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://myapp.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
 ```
 
 # Filter and Route Security
-**Diesel** provides a simple way to manage public and protected routes by using a filter() method. You can define specific routes to be publicly accessible, while others will require authentication or custom middleware functions.
+**Diesel** provides a simple way to manage public and protected routes using the `setupFilter()` method. You can define specific routes to be publicly accessible, while all other routes require authentication or custom middleware.
 
 ### How to Use the Filter
-The **filter()** method allows you to secure certain endpoints while keeping others public. You can specify routes that should be publicly accessible using permitAll(), and apply authentication or other middleware to the remaining routes with require().
+The **setupFilter()** method allows you to secure certain endpoints while keeping others open. Specify routes that should be publicly accessible using `publicRoutes()` + `permitAll()`, and apply authentication middleware to the remaining routes with `authenticate()`.
 
 
 ### Example Usage
-```javascript
-import  {Diesel}  from "diesel-core";
+```typescript
+import { Diesel } from "diesel-core";
 import jwt from 'jsonwebtoken';
-
 
 const app = new Diesel();
 
-async function authJwt (ctx:ContextType, server?:Server): Promise<void | Response> {
-  const token = await ctx.cookies?.accessToken  // Retrieve the JWT token from cookies
+async function authJwt(ctx: ContextType): Promise<void | Response> {
+  const token = ctx.cookies?.accessToken;
   if (!token) {
-    return ctx.json({ message: "Authentication token missing" },401);
+    return ctx.json({ message: "Authentication token missing" }, 401);
   }
   try {
-    // Verify the JWT token using a secret key
-    const user = jwt.verify(token, secret);  // Replace with your JWT secret
-    // Set the user data in context
-    ctx.set('user',user);
+    const user = jwt.verify(token, secret);
+    ctx.set('user', user);
   } catch (error) {
-    return ctx.json({ message: "Invalid token" },403);
+    return ctx.json({ message: "Invalid token" }, 403);
   }
 }
 
 // Define routes and apply filter
 app
-  .filter()
-  .routeMatcher('/api/user/register', '/api/user/login', '/test/:id', '/cookie')
+  .setupFilter()
+  .publicRoutes('/api/user/register', '/api/user/login', '/test/:id', '/cookie')
   .permitAll()
-  .authenticate([authJwt]); 
+  .authenticate([authJwt]);
 
-// Example public route (no auth required)
-app.get("/api/user/register", async (ctx:ContextType) => {
+// Public route (no auth required)
+app.get("/api/user/register", async (ctx: ContextType) => {
   return ctx.json({ msg: "This is a public route. No authentication needed." });
 });
 
-// Example protected route (requires auth)
-app.get("/api/user/profile", async (ctx:ContextType) => {
-  // This route is protected, so the auth middleware will run before this handler
-  const user = ctx.get.user
-  return ctx.json({ 
-    msg: "You are authenticated!" ,
-    user
-    });
+// Protected route (requires auth)
+app.get("/api/user/profile", async (ctx: ContextType) => {
+  const user = ctx.get("user");
+  return ctx.json({ msg: "You are authenticated!", user });
 });
 
-// Start the server
 const port = 3000;
 app.listen(port, () => {
   console.log(`Diesel is running on port ${port}`);
-})
-
+});
 ```
 # Filter Methods
-1. **routeMatcher(...routes: string[])** : Passed endpoints in this routeMatcher will be ***Public*** means they don't need authentication, including those with dynamic parameters (e.g., /test/:id).
+1. **publicRoutes(...routes: string[])** : Routes passed here are ***public*** and require no authentication, including those with dynamic parameters (e.g., /test/:id).
 
 ```javascript 
-.routeMatcher('/api/user/register', '/api/user/login', '/test/:id')
+.publicRoutes('/api/user/register', '/api/user/login', '/test/:id')
 ```
-1. **permitAll()** : Marks the routes specified in routeMatcher() as publicly accessible, meaning no middleware (like authentication) will be required for these routes.
+2. **permitAll()** : Marks the routes specified in `publicRoutes()` as publicly accessible, bypassing authentication middleware.
 
 ```javascript 
 .permitAll()
 ```
-1. **authenticate([fnc?: middlewareFunc])** :Means that defined routes in ***routeMatcher*** is public & All endpoints needs authentication.
+3. **authenticate([fnc?: middlewareFunc])** : Applies one or more authentication middleware functions to all routes not listed in `publicRoutes()`.
 
-*Note* : If you don't pass a middleware function to authenticate(), DieselJS will throw an "Unauthorized" error by default. Ensure that you implement and pass a valid authentication function
+*Note* : If you don't pass a middleware function to `authenticate()`, DieselJS will return an "Unauthorized" response by default.
 ```javascript 
 .authenticate([authJwt])
 
-.authenticate([authJwt, ....]) // you can can add many auth midlleware to authenticate
+.authenticate([authJwt, rateLimiter]) // chain multiple auth middlewares
 ```
-## Use Case
- * **Public Routes** :  Some routes ***(like /api/user/register or /api/user/login)*** are often open to all users without authentication. These routes can be specified with permitAll().
+4. **authenticateJwt(jwt)** : Built-in JWT filter. Requires `jwtSecret` set in `DieselOptions`. Sets `ctx.get("user")` automatically.
 
- * **Protected Routes** : For other routes ***(like /api/user/profile)***, you'll want to require authentication or custom middleware. Use require(authJwt) to ensure that the user is authenticated before accessing these routes.
+```javascript
+const app = new Diesel({ jwtSecret: "your-secret" });
+app.setupFilter().publicRoutes('/login').permitAll().authenticateJwt(jwt);
+```
+
+## Use Case
+ * **Public Routes** :  Routes like `/api/user/register` or `/api/user/login` are open to all users. Add them with `publicRoutes()` + `permitAll()`.
+
+ * **Protected Routes** : All other routes require authentication via `authenticate([authJwt])` or `authenticateJwt(jwt)`.
 
 # Using Hooks in DieselJS
 
@@ -204,32 +205,29 @@ To define hooks in your DieselJS application, you can add them directly to your 
 
 ```javascript
 
-// define and onError hook
-
-app.addHooks("onError",(error,req,url,server) => {
-  console.log(`error occured ${error.message}`)
-  // retunr new Response(......)
+// onError hook: receives (error, path, req)
+app.addHooks("onError", (error, path, req) => {
+  console.log(`Error on ${req.method} ${path}: ${error.message}`)
+  // optionally return a Response to override the default error response
 })
 
-// Define an onRequest hook
-app.addHooks("onRequest",(req,url,server) =>{
-    console.log(`Request received: ${req.method} ${url}`);
+// onRequest hook: receives ctx
+app.addHooks("onRequest", (ctx) => {
+    console.log(`Request received: ${ctx.req.method} ${ctx.path}`);
 })
-// you get req,url & server instance in onReq
 
-// Define a preHandler hook
-app.addHooks("preHandler",(ctx:ContextType) =>{
-    // Check for authentication token
+// preHandler hook: receives ctx, return a Response to stop the request
+app.addHooks("preHandler", (ctx) => {
   const authToken = ctx.req.headers.get("Authorization");
   if (!authToken) {
     return new Response("Unauthorized", { status: 401 });
   }
 })
 
-// Define an onSend hook
-app.addHooks('onSend',async (ctx, result) => {
+// onSend hook: receives ctx and the outgoing result Response
+app.addHooks('onSend', async (ctx, result) => {
   console.log(`Sending response with status: ${result.status}`);
-  return result; // You can modify the response here if needed
+  return result; // return a modified response or the original
 });
 ```
 

@@ -4,29 +4,66 @@ title: CORS Configuration
 
 # CORS Configuration
 
-Cross-Origin Resource Sharing (CORS) is a mechanism that allows restricted resources on a web page to be requested from another domain outside the domain from which the first resource was served.
+Cross-Origin Resource Sharing (CORS) is a mechanism that allows restricted resources on a web page to be requested from another domain. Diesel ships with a built-in `cors` middleware.
 
-## Basic Configuration
+## Import
 
-To enable CORS, you need to configure your server to allow requests from specific origins. Here's how to set it up...
+```typescript
+import { cors } from "diesel-core/cors";
+```
 
-## Example
+## Basic Usage
 
-Here’s an example of how to set CORS headers in an Express.js application:
+```typescript
+import { Diesel } from "diesel-core";
+import { cors } from "diesel-core/cors";
 
-```javascript
-const express = require('express');
-const cors = require('cors');
+const app = new Diesel();
 
-const app = express();
+app.use(cors({
+  origin: "*", // allow all origins
+}));
 
-// Enable CORS for all routes
-app.use(cors());
-
-app.get('/api/data', (req, res) => {
-    res.json({ message: 'This is CORS-enabled for all origins!' });
+app.get("/api/data", (ctx) => {
+  return ctx.json({ message: "CORS-enabled response" });
 });
 
-app.listen(3000, () => {
-    console.log('Server running on port 3000');
-});
+app.listen(3000);
+```
+
+## Configuration Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `origin` | `string \| string[]` | — | Allowed origin(s). Use `"*"` for all. |
+| `methods` | `string[]` | `["GET","POST","PUT","DELETE","OPTIONS"]` | Allowed HTTP methods. |
+| `allowedHeaders` | `string[]` | `["Content-Type","Authorization"]` | Allowed request headers. |
+| `exposedHeaders` | `string[]` | `[]` | Headers exposed to the browser. |
+| `credentials` | `boolean` | `false` | Whether to allow cookies/credentials. |
+| `maxAge` | `number` | — | Preflight cache duration in seconds. |
+
+## Example: Restrict to specific origins
+
+```typescript
+app.use(cors({
+  origin: ["http://localhost:5173", "https://myapp.com"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+}));
+```
+
+## Example: Allow a single origin
+
+```typescript
+app.use(cors({
+  origin: "https://myapp.com",
+  credentials: true,
+}));
+```
+
+## How it works
+
+- If the request `Origin` matches the configured allowed origins, Diesel sets `Access-Control-Allow-Origin` accordingly.
+- For `OPTIONS` preflight requests, Diesel responds with `204` and sets `Access-Control-Max-Age` if `maxAge` is configured.
+- If the origin is not allowed, Diesel returns `403 CORS not allowed`.

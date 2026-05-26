@@ -1,69 +1,104 @@
 ---
-title:  Using Loggers in DieselJS
+title: Using Loggers in DieselJS
 ---
 
 ### Enhancing Request Handling with Loggers in DieselJS
-DieselJS allows you to monitor your request-response cycle efficiently using loggers(). These loggers provide insights into incoming and outgoing requests, helping with debugging and performance analysis.
 
+DieselJS ships with two built-in loggers that track the request-response cycle, making debugging and performance analysis straightforward.
 
 ## What are loggers?
-Loggers in DieselJS track and display request details, making it easier to debug your application. They log information about incoming requests and outgoing responses, including request methods, URLs, response statuses, and execution times.
 
+Loggers in DieselJS log information about incoming requests and outgoing responses, including request methods, URLs, response statuses, and execution times. They work by registering `onRequest`, `onSend`, and `onError` hooks internally.
 
-### Types of Loggers in DieselJS
-    1. `logger(app)` - Basic logging
-    2. `advancedLogger(app)` - Detailed logging with request metadata
+## Types of Loggers
 
-**Using `logger(app)`**
-The `logger()` function provides a simple way to track requests and responses.
+1. `logger` - Simple, compact request/response logging
+2. `advancedLogger` - Detailed JSON-formatted logging with headers and timestamps
 
-Example:
+---
+
+## Quick Enable via `DieselOptions`
+
+The simplest way to enable the basic logger is to pass `logger: true` when creating the app:
+
+```typescript
+import { Diesel } from "diesel-core";
+
+const app = new Diesel({ logger: true });
+
+app.get("/", (ctx) => ctx.text("Hello!"));
+
+app.listen(3000);
 ```
-import {Diesel} from 'diesel-core'
-import {logger} from 'diesel-core/logger'
 
-const app = new Diesel()
+---
 
-// logger needs app instance to work
-app.use(logger(app) as any)
+## `logger` — Basic Logging
 
+Import and apply manually for more control:
+
+```typescript
+import { Diesel } from "diesel-core";
+import { logger } from "diesel-core/logger";
+
+const app = new Diesel();
+
+app.useLogger({ app });
+// or equivalently:
+// logger({ app });
+
+app.listen(3000);
 ```
-Sample Output:
-```cmd
+
+Sample output:
+```
 <-- GET /
 --> GET / 200 5ms
-
 ```
 
-**Using `advancedLogger(app)`**   
-The `advancedLogger()` function provides detailed logging, including request headers, 
-timestamps, and response duration.
+You can also pass custom callbacks:
 
-Example:
-```
-import {Diesel} from 'diesel-core'
-import {advancedLogger} from 'diesel-core/logger'
-
-const app = new Diesel()
-
-// logger needs app instance to work
-app.use(advancedLogger(app) as any)
-
+```typescript
+app.useLogger({
+  app,
+  onRequest: (req, pathname) => {
+    console.log(`[custom] ${req.method} ${pathname}`);
+  },
+  onError: (error, pathname, req) => {
+    console.error(`[custom error] ${req.method} ${pathname}: ${error.message}`);
+  },
+});
 ```
 
-Sample Output:
-```cmd
+---
+
+## `advancedLogger` — Detailed Logging
+
+```typescript
+import { Diesel } from "diesel-core";
+import { advancedLogger } from "diesel-core/logger";
+
+const app = new Diesel();
+
+app.useAdvancedLogger({ app });
+// or equivalently:
+// advancedLogger({ app });
+
+app.listen(3000);
+```
+
+Sample output:
+```
 [INFO] Incoming Request - GET
 {
   "timestamp": "2025-03-20T11:00:15.744Z",
   "method": "GET",
-  "url": "http://localhost:3000/",
+  "url": "/",
   "headers": {
-    "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "user-agent": "Mozilla/5.0 ...",
     "content-type": null
   }
 }
-
 
 [INFO] Response Sent - GET
 {
@@ -73,10 +108,27 @@ Sample Output:
   "status": 200,
   "duration": "10ms"
 }
+```
 
+You can also pass custom callbacks:
 
+```typescript
+app.useAdvancedLogger({
+  app,
+  onRequest: (ctx) => {
+    console.log(`[custom] ${ctx.req.method} ${ctx.path}`);
+  },
+  onSend: (ctx) => {
+    // optionally return a Response to override
+  },
+  onError: (error, path, req) => {
+    console.error(`[error] ${req.method} ${path}: ${error.message}`);
+  },
+});
 ```
 
 ### Conclusion
 
-Using loggers in DieselJS enhances request tracking, making debugging easier and providing performance insights. The logger(app) is ideal for basic logging, while advancedLogger(app) offers detailed request and response data. Choose the one that best fits your needs!
+- Use `new Diesel({ logger: true })` for zero-config basic logging.
+- Use `app.useLogger({ app })` or `app.useAdvancedLogger({ app })` for more control.
+- `advancedLogger` is best for production debugging with detailed JSON output.

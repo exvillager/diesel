@@ -17,54 +17,79 @@ Hooks are registered with the `app.addHooks` method and allow you to listen to s
 
 ### onRequest
 **Triggered when a request is received. Ideal for logging or initial request checks.**
-***Note***: -`onRequest` gives you `req, url & server` object which is enough for logging incoming request details
+
+`onRequest` receives the `ctx` (Context) object.
 ```typescript
-app.addHooks("onRequest", (req, url, server) => {
-  console.log(`Request received: ${req.method} ${url}`);
-  // Access the request , url and server instance here
+app.addHooks("onRequest", (ctx) => {
+  console.log(`Request received: ${ctx.req.method} ${ctx.path}`);
 });
 ```
+
 ### preHandler
 **Invoked just before the request handler executes. Use this for authentication checks or data validation.**
-`preHandler` only gives you `context` object
+
+`preHandler` receives the `ctx` (Context) object. Return a Response to short-circuit the handler.
 ```typescript
 app.addHooks("preHandler", (ctx) => {
-  // Check for authentication token
   const authToken = ctx.req.headers.get("Authorization");
   if (!authToken) {
     return new Response("Unauthorized", { status: 401 });
   }
 });
 ```
-### postHandler
-**Executed after the request handler completes but before sending the response. Good for logging response data or modifying it before sending.**
-`postHandler` only gives you `context` object
 
+### postHandler
+**Executed after the request handler completes but before sending the response. Useful for logging or post-processing.**
+
+`postHandler` receives the `ctx` (Context) object.
 ```typescript
 app.addHooks("postHandler", async (ctx) => {
-  console.log(`Response sent for: ${ctx.req.url}`);
+  console.log(`Handler completed for: ${ctx.req.url}`);
 });
 ```
+
 ### onSend
-**Called just before the response is sent to the client. You can manipulate the response here if necessary.**
-`onSend` gives you `context & result` object
+**Called just before the response is sent to the client. You can inspect or modify the response here.**
+
+`onSend` receives `ctx` and the outgoing `result` (Response).
 ```typescript
 app.addHooks("onSend", async (ctx, result) => {
   console.log(`Sending response with status: ${result.status}`);
-  return result; // Modify the response here if needed
+  return result; // return a modified response or the original
 });
 ```
+
 ### onError
-**Executes if any error occurs during request handling. This is where you can implement centralized error logging or custom error responses.**
-`onError` gives you `error , request,url,server` objects
+**Executes if any unhandled error occurs during request handling. Use this for centralized error logging or custom error responses.**
+
+`onError` receives `(error, path, req)`.
 ```typescript
-app.addHooks("onError", (error, req, url, server) => {
-  console.error(`Error occurred: ${error.message}`);
-  // Optionally, return a new Response object or handle the error
+app.addHooks("onError", (error, path, req) => {
+  console.error(`Error on ${req.method} ${path}: ${error.message}`);
+  // Optionally return a Response to override the default error response
+  return Response.json({ error: error.message }, { status: 500 });
 });
 ```
+
+### onClose
+**Triggered when the server is closing. Use this for cleanup logic.**
+
+`onClose` receives the `ctx` (Context) object.
+```typescript
+app.addHooks("onClose", (ctx) => {
+  console.log("Server is shutting down");
+});
+```
+
 ### routeNotFound
 
+Use `app.routeNotFound()` to define a custom 404 handler for unmatched routes:
+
+```typescript
+app.routeNotFound((ctx) => {
+  return ctx.json({ error: `Route ${ctx.path} not found` }, 404);
+});
+```
 
 ## Conclusion
 **Using hooks in DieselJS allows for a structured and maintainable approach to managing application behavior during the request lifecycle. By strategically placing custom logic in hooks, you can streamline tasks such as logging, authentication, and error handling, leading to a more robust application architecture.**
