@@ -13,7 +13,7 @@ export async function runHooks<T extends any[]>(
   for (let i = 0; i < hooksArray.length; i++) {
     const result = hooksArray[i](...args);
     const finalResult = result instanceof Promise ? await result : result;
-    if (finalResult && label !== 'onRequest') return finalResult
+    if (finalResult) return finalResult
   }
 }
 

@@ -36,7 +36,7 @@ export class Context {
   #param: Record<string, string> | undefined;
   env?: Record<string, any>;
   executionContext?: any;
-  headers: Headers | null;
+  headers?: Headers;
 
   // Lazily initialized
   private parsedQuery: Record<string, string> | null = null;
@@ -59,9 +59,6 @@ export class Context {
     this.#param = param;
     this.env = env;
     this.executionContext = executionContext;
-
-    //
-    this.headers = null;
   }
 
   // Methods

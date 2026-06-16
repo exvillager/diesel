@@ -1,42 +1,16 @@
 import Fastify from 'fastify'
 
-const fastify = Fastify({
-  logger: false
-})
+const PORT = parseInt(process.env.PORT || "3000");
+const fastify = Fastify({ logger: false })
 
-// Declare a route
-fastify.get('/', function (request, reply) {
-  reply.send("Hello world")
-})
+fastify.get('/', (_req, reply) => reply.send({ message: "Hello Fastify!", framework: "fastify" }))
+fastify.get('/user/:id', (req, reply) => reply.send("from id " + req.params.id))
+fastify.get('/users/:name', (req, reply) => reply.send("from name " + req.params.name))
+fastify.get('/user/:id/post/:postId', (req, reply) =>
+  reply.send({ userId: req.params.id, postId: req.params.postId })
+)
 
-fastify.register(async (app) => {
-  app.addHook('onRequest', (_,ok,done) => {
-    console.log('module hook')
-    done()
-  })
-  app.get('/test', async () => {
-    return "Hello test"
-  })
-  // app.addHook('onSend', () => {
-  //   console.log('onsend module hook')
-  // })
-})
-
-fastify.addHook('onRequest', (_,ok,done) => {
-  console.log('global hook')
-  done()
-})
-fastify.addHook('onResponse', async (request, reply) => {
-  console.log("url ", request.routeOptions.url)
-  console.log("raw url ", request.url)
-})
-
-// Run the server!
-fastify.listen({ port: 3003 }, function (err, address) {
-    console.log('fastify running on 3003')
-  if (err) {
-    fastify.log.error(err)
-    process.exit(1)
-  }
-  // Server is now listening on ${address}
+fastify.listen({ port: PORT }, (err) => {
+  if (err) { fastify.log.error(err); process.exit(1) }
+  console.log(`fastify running on ${PORT}`)
 })

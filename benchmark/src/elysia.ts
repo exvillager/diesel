@@ -1,28 +1,19 @@
 import { Elysia } from "elysia";
-import { Hono } from "hono";
+
+const PORT = parseInt(process.env.PORT || "3000");
 
 const app = new Elysia();
 
-// middleware
-app.onBeforeHandle(({ set }) => {
-  set.headers["x-powered-by"] = "elysia";
-});
+app.get("/", () => ({ message: "Hello Elysia!", framework: "elysia" }));
 
-const hono = new Hono();
+app.get("/user/:id", ({ params }) => "from id " + params.id);
 
-hono.get("/", async (c) => {
-  // read incoming headers from Elysia request
-  const poweredBy = c.req.header("x-powered-by");
+app.get("/users/:name", ({ params }) => "from name " + params.name);
 
-  console.log(poweredBy);
+app.get("/user/:id/post/:postId", ({ params }) => ({
+  userId: params.id,
+  postId: params.postId,
+}));
 
-  return c.text("jelll")
-});
-
-hono.get("/h", (c) => c.text("/h"))
-
-app
-  .mount("/hono", hono.fetch)
-  .listen(3002);
-
-console.log("Server running");
+app.listen(PORT);
+console.log(`elysia running on port ${PORT}`);

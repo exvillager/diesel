@@ -516,7 +516,7 @@ export default class Diesel {
     server?: Server,
     env?: Record<string, any>,
     executionContext?: any,
-  ): Promise<Response | undefined> {
+  ): Response | Promise<Response | undefined> {
     const path = getPath(req.url);
     const matchedRouteHandler = this.router.find(
       req.method as HttpMethod,
