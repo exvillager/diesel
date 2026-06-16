@@ -9,7 +9,7 @@
 set -euo pipefail
 
 BENCH_PORT=${PORT:-3000}
-BENCH_URL="http://localhost:${BENCH_PORT}"
+BENCH_URL="http://127.0.0.1:${BENCH_PORT}"
 DURATION=${DURATION:-10}
 CONNECTIONS=${CONNECTIONS:-100}
 WRK_THREADS=${WRK_THREADS:-4}
@@ -152,7 +152,7 @@ while [[ $# -gt 0 ]]; do
     --duration)    DURATION="$2";    shift 2 ;;
     --connections) CONNECTIONS="$2"; shift 2 ;;
     --threads)     WRK_THREADS="$2"; shift 2 ;;
-    --port)        BENCH_PORT="$2"; BENCH_URL="http://localhost:${BENCH_PORT}"; shift 2 ;;
+    --port)        BENCH_PORT="$2"; BENCH_URL="http://127.0.0.1:${BENCH_PORT}"; shift 2 ;;
     -*)            err "Unknown flag: $1"; usage ;;
     *)
       if is_known_fw "$1"; then

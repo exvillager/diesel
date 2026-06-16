@@ -232,3 +232,31 @@ describe("path mid check", () => {
     expect(result.handler).toHaveLength(1)
   });
 });
+
+describe("dynamic test again with dff", () => {
+  let router: any;
+  beforeAll(() => {
+    router = new TrieRouter();
+    router.add("GET", "/users/:id/posts", () => {
+      return "posts";
+    });
+    router.add("GET", "/users/me/settings", () => {
+      return "settings";
+    });
+  });
+
+  test("it should match /users/me/settings", () => {
+    const result = router.find("GET", "/users/me/settings");
+    expect(result.handler?.[0](result.params as any)).toBe("settings");
+  });
+
+  test("it should match /users/:id/posts", () => {
+    const result = router.find("GET", "/users/123/posts");
+    expect(result.handler?.[0](result.params as any)).toBe("posts");
+  });
+
+  test("it should match /users/me/posts", () => {
+    const result = router.find("GET", "/users/me/posts");
+    expect(result.handler?.[0](result.params as any)).toBe("posts");
+  });
+});
