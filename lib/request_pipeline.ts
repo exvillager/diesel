@@ -27,6 +27,13 @@ function extractBody(fn: Function) {
 
 const isAsync = (func: Function) => func.constructor.name === "AsyncFunction";
 
+const hook_final_res = (hook_type: string, res_var: string): string => {
+  if (hook_type === "onRequest") {
+    return "";
+  }
+  return `if (${res_var}) return ${res_var};`;
+};
+
 const pushHooks = (
   pipeline: string[],
   hooks: HookFunction[],
@@ -35,30 +42,22 @@ const pushHooks = (
 ) => {
   if (hooks.length > 5) {
     pipeline.push(`
-      for (let i = 0; i < diesel.hooks.${hooksType}.length; i++) {
-        const result = diesel.hooks.${hooksType}[i](${args});
-        const finalResult = result instanceof Promise ? await result : result;
-        if (finalResult && '${hooksType}' !== 'onRequest') return finalResult
+    for (let i = 0; i < diesel.hooks.${hooksType}.length; i++) {
+      const result = diesel.hooks.${hooksType}[i](${args});
+      const finalResult = result instanceof Promise ? await result : result;
+      ${hook_final_res(hooksType, "finalResult")}
     }
-  `);
-  }
-  // else inline each hooks functions
-  else {
+    `);
+  } else {
     hooks?.forEach((handler: Function, index: number) => {
       const isFunctionAsync = isAsync(handler);
-      if (isFunctionAsync) {
-        // use await
-        pipeline.push(`
-            const ${hooksType}${index}Result = await diesel.hooks.${hooksType}[${index}](${args})
-            if (${hooksType}${index}Result && '${hooksType}' !== 'onRequest') return ${hooksType}${index}Result
-            `);
-      } else {
-        // normal function invokation
-        pipeline.push(`
-            const ${hooksType}${index}Result = diesel.hooks.${hooksType}[${index}](${args})
-             if (${hooksType}${index}Result && '${hooksType}' !== 'onRequest') return ${hooksType}${index}Result
-            `);
-      }
+      const resVar = `${hooksType}${index}Result`;
+      const awaitPrefix = isFunctionAsync ? "await " : "";
+
+      pipeline.push(`
+        const ${resVar} = ${awaitPrefix}diesel.hooks.${hooksType}[${index}](${args});
+        ${hook_final_res(hooksType, resVar)}
+      `);
     });
   }
 };
@@ -388,7 +387,7 @@ export const build_request_pipeline_latest = (diesel: Diesel): Function => {
       if (res) return res;
     }
   }`;
-  pipeline.push(m)
+  pipeline.push(m);
 
   // Pre-handler
   if (diesel.hasPreHandlerHook) {
@@ -419,21 +418,21 @@ export const build_request_pipeline_latest = (diesel: Diesel): Function => {
 
   // Route not found check
   pipeline.push(`
-    return await handleRouteNotFound(diesel, ctx, pathname);
+    return await handleRouteNotFound(diesel, ctx, ctx.path);
   `);
-  
+
   const body = `
-      return function execute_handlers(ctx,matchedRouteHandler){
+      return async function execute_handlers(diesel, ctx, matchedRouteHandler){
         ${pipeline.join("\n")}
       }
   `;
-  
-  const fnc = new Function(
-    body
-  );
-  return fnc();
-};
 
-const f = build_request_pipeline_latest({} as Diesel)
-console.log(typeof f)
-console.log(f.toString())
+  const fnc = new Function(
+    "diesel",
+    "handleRouteNotFound",
+    "Context",
+    "isPromise",
+    body,
+  );
+  return fnc(diesel, handleRouteNotFound, Context, isPromise);
+};
