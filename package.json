@@ -80,7 +80,7 @@
     "build": "bun build.js",
     "test": "bun test"
   },
-  "author": "Pradeep Kumar <pradeepbgs62019@gmail.com> (https://github.com/pradeepbgs)",
+  "author": "Pradeep Kumar <exvillager@gmail.com> (https://github.com/exvillager)",
   "license": "MIT",
   "keywords": [
     "diesel",
